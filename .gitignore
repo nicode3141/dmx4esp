@@ -1,0 +1,18 @@
+build/
+sdkconfig
+sdkconfig.old
+
+.devcontainer/
+.vscode/
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
