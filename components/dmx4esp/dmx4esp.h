@@ -4,5 +4,5 @@
 #include "string.h"
 #include "driver/gpio.h"
 
-void init(void);
-void sendDMX(uint8_t DMXStream[512]);
+esp_err_t initDMX(void);
+void sendDMX(uint8_t DMXStream[]);
