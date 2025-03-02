@@ -17,13 +17,13 @@
 static const int RX_BUF_SIZE = 512;
 
 //ASYNC DMX Handler
-QueueHandle_t dmxQueue;
-SemaphoreHandle_t sendDMXSemaphore;
+static QueueHandle_t dmxQueue;
+static SemaphoreHandle_t sendDMXSemaphore;
 
-#define TXD_PIN (GPIO_NUM_1)
-#define RXD_PIN (GPIO_NUM_3)
-#define rxtxDIR_PIN (GPIO_NUM_23)
-#define UART_PORT UART_NUM_2 // we're using UART_NUM_2, UART_NUM_0 is connected to Serial UART Interface
+static gpio_num_t TXD_PIN = GPIO_NUM_1;
+static gpio_num_t RXD_PIN = GPIO_NUM_3;
+static gpio_num_t rxtxDIR_PIN = GPIO_NUM_23;
+static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART_NUM_0 is connected to Serial UART Interface
 
 //UART DMX Communication Protocol
 #define delayBreakMICROSEC 250 // how long should the Break signal be (>88µs)
@@ -32,16 +32,47 @@ SemaphoreHandle_t sendDMXSemaphore;
 enum DMXStatus {SEND, RECEIVE, BREAK};
 enum DMXStatus dmxStatus = SEND;
 
-uint8_t dmxPacket[512];
-uint8_t dmxReadOutput[512];
-uint16_t lastDmxReadAddress = 0;
+static uint8_t dmxPacket[512];
+static uint8_t dmxReadOutput[512];
+static uint16_t lastDmxReadAddress = 0;
 
 /**
 * DMX
 */
 
 
-void sendDMXPipeline(uint8_t *startCode){
+/**
+ * @brief Configures the GPIO pins for DMX communication.
+ **
+ * @note To use the default pins, use setupDMX_default().
+ * @param txPin The GPIO pin number for transmitting DMX data.
+ * @param rxPin The GPIO pin number for receiving DMX data.
+ * @param rxtxDirectionPin The GPIO pin number for controlling the direction of the DMX communication.
+ *
+ * @return void
+ */
+void setupDMX(gpio_num_t txPin, gpio_num_t rxPin, gpio_num_t rxtxDirectionPin){
+    TXD_PIN = txPin;
+    RXD_PIN = rxPin;
+    rxtxDIR_PIN = rxtxDirectionPin;
+}
+
+/**
+ * @brief Configures the GPIO pins for DMX communication.
+ * 
+ * @note To use custom pins, use setupDMX().
+ * @note default: TX -> gpio1, RX -> gpio3, direction -> gpio23
+ *
+ * @return void
+ */
+void setupDMX_default(){
+    gpio_num_t TXD_PIN = GPIO_NUM_1;
+    gpio_num_t RXD_PIN = GPIO_NUM_3;
+    gpio_num_t rxtxDIR_PIN = GPIO_NUM_23;
+}
+
+
+static void sendDMXPipeline(uint8_t *startCode){
     //UART communication
     uart_wait_tx_done(UART_PORT, 1000); // wait 1000 ticks until empty
     //Reset or Break > 88µs
@@ -66,7 +97,7 @@ void sendDMXPipeline(uint8_t *startCode){
     vTaskDelay(10 / portTICK_PERIOD_MS); //sleep 10ms
 }
 
-void sendDMXtask(void * parameters){
+static void sendDMXtask(void * parameters){
     
     uint8_t startCode = 0x00;
 
@@ -75,7 +106,7 @@ void sendDMXtask(void * parameters){
     }
 }
 
-void read_uart_stream(uint8_t *receiveBuffer, uart_event_t *uartEvent){
+static void read_uart_stream(uint8_t *receiveBuffer, uart_event_t *uartEvent){
     ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_PORT, (size_t*)&uartEvent->size)); //check for enough space to receive
     uart_read_bytes(UART_PORT, receiveBuffer, uartEvent->size, portMAX_DELAY); //read uart indefinitely
 
@@ -97,7 +128,7 @@ void read_uart_stream(uint8_t *receiveBuffer, uart_event_t *uartEvent){
     }
 }
 
-void receiveDMXtask(void * parameters){
+static void receiveDMXtask(void * parameters){
     uint8_t receiveBuffer[RX_BUF_SIZE]; //without malloc() -> static buffer
 
     uart_event_t uartEvent;
@@ -118,6 +149,14 @@ void receiveDMXtask(void * parameters){
 
 }
 
+/**
+ * @brief configures the esp to send / receive dmx data.
+ *        This function can be called multiple times.
+ **
+ * @note  sends / reads a dmxSignal concurrently!
+ * @param sendDMX if true, send dmx forever. Otherwise read dmx.
+ * @return void
+ */
 esp_err_t initDMX(bool sendDMX) {
     const uart_config_t uart_config = {
         .baud_rate = 250000,
@@ -152,10 +191,42 @@ void clearDMXQueue(){
     uart_flush_input(UART_PORT);
 }
 
+/**
+ * @brief This function only sets the dmx data to send!
+ **       The actual data transfer happens in the init() function.  
+ * @note  init() sends the dmxSignal concurrently!
+ * @param DMXStream 512 bytes long array containing the dmx data to send
+ * @return void
+ */
 void sendDMX(uint8_t DMXStream[]){
-    xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
-    memcpy(dmxPacket, DMXStream, 512);
-    xSemaphoreGive(sendDMXSemaphore);
+    if((sizeof(DMXStream) / sizeof(DMXStream[0])) == 512){
+        xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
+        memcpy(dmxPacket, DMXStream, 512);
+        xSemaphoreGive(sendDMXSemaphore);
+    }
+}
+
+/**
+ * @brief Changes the value of any given dmx channel.
+ *        This function only sets the data to send!     
+ * @note  init() sends the dmxSignal concurrently!
+ *        
+ * @param address The address of the dmx channel (1 - 512)
+ * @param value The dmx value to send (0 - 255)
+ * @return void
+ */
+void sendAddress(uint16_t address, uint8_t value){
+    if(address >= 1 || address <= 512){
+        xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
+        dmxPacket[address] = value;
+        xSemaphoreGive(sendDMXSemaphore);
+    }
+}
+
+
+uint8_t readDMX(){
+    uint8_t dmxValues[10] = {0,0,0,0,0,0};
+    return dmxValues;
 }
 
 
