@@ -19,6 +19,7 @@ static const int RX_BUF_SIZE = 512;
 //ASYNC DMX Handler
 static QueueHandle_t dmxQueue;
 static SemaphoreHandle_t sendDMXSemaphore;
+static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
 
 static gpio_num_t TXD_PIN = GPIO_NUM_1;
 static gpio_num_t RXD_PIN = GPIO_NUM_3;
@@ -32,8 +33,8 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 enum DMXStatus {SEND, RECEIVE, BREAK};
 enum DMXStatus dmxStatus = SEND;
 
-static uint8_t dmxPacket[512];
-static uint8_t dmxReadOutput[512];
+static uint8_t dmxPacket[512]; //send packet
+static uint8_t dmxReadOutput[512]; //received packet
 static uint16_t lastDmxReadAddress = 0;
 
 /**
@@ -180,8 +181,14 @@ esp_err_t initDMX(bool sendDMX) {
     // Check if installation was successful
     if (result != ESP_OK) {
         printf("Failed to install UART driver: %d\n", result);
-    }else{
-        xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, NULL, 1); //PIN TO CORE 1
+    } else if(dmxOperationsTaskHandle != NULL){
+        vTaskDelete(dmxOperationsTaskHandle); // Delete other running dmx operations
+    } else{
+        if(sendDMX){
+            xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
+        } else{
+            xTaskCreatePinnedToCore(receiveDMXtask, "DMX Receive Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
+        }
     }
 
     return result;
@@ -220,13 +227,60 @@ void sendAddress(uint16_t address, uint8_t value){
         xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
         dmxPacket[address] = value;
         xSemaphoreGive(sendDMXSemaphore);
+    } else{
+        printf("Address out of scope (1 - 512): %i", address);
     }
 }
 
-
+/**
+ * @brief Retuns a received dmx signal (once).
+ * 
+ * @note  init() reads the dmxSignal concurrently!
+ *    
+ * @return dmxOutput - 512 bytes long array containing the dmx data received.
+ */
 uint8_t readDMX(){
-    uint8_t dmxValues[10] = {0,0,0,0,0,0};
-    return dmxValues;
+   return dmxReadOutput;
 }
 
+/**
+ * @brief Retuns a received dmx channel (once).
+ * 
+ * @note  init() reads the dmxSignal concurrently!
+ * @param address The address of the dmx channel to read from (1 - 512)
+ *    
+ * @return dmxOutput - data of the dmx channel (0 - 255) 
+ */
+uint8_t readAddress(uint16_t address){
+    if(address >= 1 || address <= 512){
+        return dmxReadOutput[address];
+    } else{
+        printf("Address out of scope (1 - 512): %i", address);
+        return 0;
+    }
+}
 
+/**
+ * @brief Retuns a range of the original dmx data.
+ * 
+ * @note please make sure that the startAddress and footprint don't exceed the maximum of channels! (512)
+ * @note  init() reads the dmxSignal concurrently!
+ * @param startAddress The first address to read from (1 - 512)
+ * @param footprint number of channels needed to read from (1 - 512)
+ *    
+ * @return dmxOutput - data of the dmx channels
+ */
+uint8_t readFixture(uint16_t startAddress, uint16_t footprint){
+    if(footprint < 1 || footprint > 512){
+        printf("Footprint out of scope (1 - 512): %i", footprint);
+        return 0;
+    }
+    if(startAddress < 1 || startAddress + footprint > 513){
+        printf("startAddress out of scope (1 - 512) / footprint exeeds scope: %i, footprint: %i, lastAddress: %i", startAddress, footprint, startAddress + footprint -1);
+        return 0;
+    } 
+    uint8_t fixtureData[footprint];
+    memcpy(fixtureData, &dmxReadOutput[startAddress], footprint); //copy a part of the original dmx output
+
+    return fixtureData;
+}
