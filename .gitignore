@@ -16,3 +16,4 @@ sdkconfig.old
 *.ko
 *.obj
 *.elf
+.qodo

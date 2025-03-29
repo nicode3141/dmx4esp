@@ -1,9 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2010-2022 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Nicolas Pfeifer <info@nicodenetworks.com>
  *
- * SPDX-License-Identifier: CC0-1.0
+ * SPDX-License-Identifier: MIT
  */
 
+#include "dmx4esp.h"
 #include <stdio.h>
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
@@ -11,8 +12,8 @@
 #include "freertos/queue.h"
 #include "driver/uart.h"
 #include "string.h"
-#include "driver/gpio.h"
 #include "esp_mac.h"
+#include "driver/gpio.h"
 
 static const int RX_BUF_SIZE = 512;
 
@@ -30,8 +31,8 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 #define delayBreakMICROSEC 250 // how long should the Break signal be (>88µs)
 #define delayMarkMICROSEC 20 // how long should the Mark signal be (>12µs)
 
-enum DMXStatus {SEND, RECEIVE, BREAK};
-enum DMXStatus dmxStatus = SEND;
+static enum DMXStatus {SEND, RECEIVE, BREAK};
+static enum DMXStatus dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
 static uint8_t dmxReadOutput[512]; //received packet
@@ -41,37 +42,29 @@ static uint16_t lastDmxReadAddress = 0;
 * DMX
 */
 
+typedef struct dmxPinout {
+    gpio_num_t tx;
+    gpio_num_t rx;
+    gpio_num_t dir;
+} dmxPinout;
+
 
 /**
  * @brief Configures the GPIO pins for DMX communication.
  **
- * @note To use the default pins, use setupDMX_default().
+ * @note To use the default pins, don't call this function.
+ * @note Library's default pins are: TX->1 RX-3 dir->23
  * @param txPin The GPIO pin number for transmitting DMX data.
  * @param rxPin The GPIO pin number for receiving DMX data.
  * @param rxtxDirectionPin The GPIO pin number for controlling the direction of the DMX communication.
  *
  * @return void
  */
-void setupDMX(gpio_num_t txPin, gpio_num_t rxPin, gpio_num_t rxtxDirectionPin){
-    TXD_PIN = txPin;
-    RXD_PIN = rxPin;
-    rxtxDIR_PIN = rxtxDirectionPin;
+void setupDMX(dmxPinout pinout){
+    TXD_PIN = pinout.tx;
+    RXD_PIN = pinout.rx;
+    rxtxDIR_PIN = pinout.dir;
 }
-
-/**
- * @brief Configures the GPIO pins for DMX communication.
- * 
- * @note To use custom pins, use setupDMX().
- * @note default: TX -> gpio1, RX -> gpio3, direction -> gpio23
- *
- * @return void
- */
-void setupDMX_default(){
-    gpio_num_t TXD_PIN = GPIO_NUM_1;
-    gpio_num_t RXD_PIN = GPIO_NUM_3;
-    gpio_num_t rxtxDIR_PIN = GPIO_NUM_23;
-}
-
 
 static void sendDMXPipeline(uint8_t *startCode){
     //UART communication
@@ -268,18 +261,24 @@ uint8_t readAddress(uint16_t address){
  * @param startAddress The first address to read from (1 - 512)
  * @param footprint number of channels needed to read from (1 - 512)
  *    
- * @return dmxOutput - data of the dmx channels
+ * @return dmxOutput - data of the dmx channels. IMPORTANT! free memory after use!
  */
 uint8_t readFixture(uint16_t startAddress, uint16_t footprint){
     if(footprint < 1 || footprint > 512){
         printf("Footprint out of scope (1 - 512): %i", footprint);
-        return 0;
+        return NULL;
     }
     if(startAddress < 1 || startAddress + footprint > 513){
         printf("startAddress out of scope (1 - 512) / footprint exeeds scope: %i, footprint: %i, lastAddress: %i", startAddress, footprint, startAddress + footprint -1);
-        return 0;
-    } 
-    uint8_t fixtureData[footprint];
+        return NULL;
+    }
+
+    uint8_t* fixtureData = (uint8_t*) malloc(footprint); //dynamic allocation to the heap. CALLER HAS TO FREE MEMORY AFTER USE!
+    if(fixtureData == NULL){
+        printf("Memory allocation failed");
+        return NULL;
+    }
+
     memcpy(fixtureData, &dmxReadOutput[startAddress], footprint); //copy a part of the original dmx output
 
     return fixtureData;

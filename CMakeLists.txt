@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
-#run tests when build in project folder
-#if you just want to use the esp4dmx library, move dmx4esp/esp4dmx into your components folder
-#set(EXTRA_COMPONENT_DIRS "./dmx4esp")
 set(EXTRA_COMPONENT_DIRS "./tests")
 
+set(COMPONENTS_DIRS "${CMAKE_SOURCE_DIR}/src")
+
+
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(dmx4esptest)
+project(dmx4esp)
+
+idf_component_register(SRCS "src/esp4dmx.c" INCLUDE_DIRS "include")
