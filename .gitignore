@@ -4,6 +4,7 @@ sdkconfig.old
 
 .devcontainer/
 .vscode/
+.idea/
 
 # Libraries
 *.lib
