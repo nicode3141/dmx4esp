@@ -12,8 +12,8 @@
 #include "freertos/queue.h"
 #include "driver/uart.h"
 #include "string.h"
-#include "driver/gpio.h"
 #include "esp_mac.h"
+#include "driver/gpio.h"
 
 static const int RX_BUF_SIZE = 512;
 
@@ -22,17 +22,16 @@ static QueueHandle_t dmxQueue;
 static SemaphoreHandle_t sendDMXSemaphore;
 static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
 
-static gpio_num_t TXD_PIN = GPIO_NUM_1;
-static gpio_num_t RXD_PIN = GPIO_NUM_3;
-static gpio_num_t rxtxDIR_PIN = GPIO_NUM_23;
+static gpio_num_t TXD_PIN = GPIO_NUM_43;
+static gpio_num_t RXD_PIN = GPIO_NUM_44;
+static gpio_num_t rxtxDIR_PIN = GPIO_NUM_1;
 static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART_NUM_0 is connected to Serial UART Interface
 
 //UART DMX Communication Protocol
 #define delayBreakMICROSEC 250 // how long should the Break signal be (>88µs)
 #define delayMarkMICROSEC 20 // how long should the Mark signal be (>12µs)
 
-static enum DMXStatus {SEND, RECEIVE, BREAK};
-static enum DMXStatus dmxStatus = SEND;
+DMXStatus dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
 static uint8_t dmxReadOutput[512]; //received packet
@@ -41,12 +40,6 @@ static uint16_t lastDmxReadAddress = 0;
 /**
 * DMX
 */
-
-typedef struct dmxPinout {
-    gpio_num_t tx;
-    gpio_num_t rx;
-    gpio_num_t dir;
-} dmxPinout;
 
 
 /**
@@ -113,11 +106,16 @@ static void read_uart_stream(uint8_t *receiveBuffer, uart_event_t *uartEvent){
             }
             break;
         case RECEIVE:
-            for(int i; i < &uartEvent->size; i++){
+            for(int i = 0; i < (int) &uartEvent->size; i++){
                 if(lastDmxReadAddress < 513){
                     dmxReadOutput[lastDmxReadAddress+1] = receiveBuffer[i]; //assign output to dmx data
+                    printf("recieved: %d\n", i);
                 }
             }
+            break;
+        case SEND:
+            break;
+        default:
             break;
     }
 }
@@ -138,6 +136,8 @@ static void receiveDMXtask(void * parameters){
             case UART_DATA:
                 read_uart_stream(receiveBuffer, &uartEvent);
                 break;
+            default:
+                break;
         }
     }
 
@@ -152,6 +152,9 @@ static void receiveDMXtask(void * parameters){
  * @return void
  */
 esp_err_t initDMX(bool sendDMX) {
+
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+
     const uart_config_t uart_config = {
         .baud_rate = 250000,
         .data_bits = UART_DATA_8_BITS,
@@ -161,15 +164,27 @@ esp_err_t initDMX(bool sendDMX) {
     };
     
     uart_param_config(UART_PORT, &uart_config);
+
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+
     uart_set_pin(UART_PORT, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
+    vTaskDelay(20 / portTICK_PERIOD_MS);
 
     gpio_set_direction(rxtxDIR_PIN, GPIO_MODE_OUTPUT); // CONFIGURE GPIO PIN 26 AS OUTPUT
 
     gpio_set_level(rxtxDIR_PIN, sendDMX ? 1 : 0); // PULL OUTPUT DIR HIGH TO SEND
     sendDMXSemaphore = xSemaphoreCreateMutex();
 
+    if (sendDMXSemaphore == NULL) {
+        printf("Failed to create DMX semaphore\n");
+        return ESP_FAIL;
+    }
 
+    vTaskDelay(20 / portTICK_PERIOD_MS);
     esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 0, NULL, 0);
+
+    vTaskDelay(20 / portTICK_PERIOD_MS);
 
     // Check if installation was successful
     if (result != ESP_OK) {
@@ -177,6 +192,9 @@ esp_err_t initDMX(bool sendDMX) {
     } else if(dmxOperationsTaskHandle != NULL){
         vTaskDelete(dmxOperationsTaskHandle); // Delete other running dmx operations
     } else{
+
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+
         if(sendDMX){
             xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         } else{

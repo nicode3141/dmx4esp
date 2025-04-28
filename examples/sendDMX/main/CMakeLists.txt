@@ -1,3 +1,5 @@
-idf_component_register(SRCS "sendDMX.c"
+cmake_minimum_required(VERSION 3.16)
+
+idf_component_register(SRCS "dmxSend.c"
                     INCLUDE_DIRS "."
-                    REQUIRES )
+                    REQUIRES driver freertos dmx4esp)
