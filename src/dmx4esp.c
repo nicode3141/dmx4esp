@@ -17,9 +17,9 @@
 
 static const int RX_BUF_SIZE = 512;
 
-//ASYNC DMX Handler
+//Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
 static QueueHandle_t dmxQueue;
-static SemaphoreHandle_t sendDMXSemaphore;
+static SemaphoreHandle_t sendDMXSemaphore; //semaphore in form of a Mutex
 static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
 
 //default pinout
@@ -29,8 +29,8 @@ static gpio_num_t rxtxDIR_PIN = GPIO_NUM_23;
 static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART_NUM_0 is connected to Serial UART Interface
 
 //UART DMX Communication Protocol
-#define delayBreakMICROSEC 250 // how long should the Break signal be (>88µs)
-#define delayMarkMICROSEC 20 // how long should the Mark signal be (>12µs)
+#define delayBreakMICROSEC 250 // duration of the Break Signal (>88µs)
+#define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
 
 //enums needed for internal dmx decoding
 static enum DMXStatus {SEND, RECEIVE, BREAK};
@@ -72,7 +72,8 @@ void setupDMX(dmxPinout pinout){
  * @brief Internal pipeline for sending current dmx data from internal uint8_t dmxPacket[512] once.
  *
  * @note This function is only expected to be used internally.
- * @param startCode Memory Address to the start code, normally 0x00.
+ * @param startCode Pointer to the start code, normally 0x00 for default control.
+ *                                           Special cases covered in the README.
  * 
  * 
  * @return void
@@ -118,12 +119,21 @@ static void sendDMXtask(void * parameters){
     }
 }
 
+/** ----------------------------------------------------------------
+ *  ------  The DMX READ feature is CURRENTLY NOT SUPPORTED! -------
+ *  
+ *  The implementation below is unreliable due to timing problems
+ *      with the esp32 development boards
+ *      and lack of development time.
+ *  ----------------------------------------------------------------
+ */
+
 /**
  * @brief Internal function to decode the received uart stream into dmx data.
  *
  * @note This function is only expected to be used internally.
- * @param receiveBuffer Memory Address of a Array the data should be written to.abort
- * @param uartEvent 
+ * @param receiveBuffer Pointer to the buffer where the received dmx data should be written to.
+ * @param uartEvent Pointer to the Event structure used in UART event queue.
  * 
  * @return void
  */
@@ -140,11 +150,15 @@ static void readUARTStream(uint8_t *receiveBuffer, uart_event_t *uartEvent){
             }
             break;
         case RECEIVE:
-            for(int i; i < &uartEvent->size; i++){
+            for(int i = 0; i < (int) uartEvent->size; i++){
                 if(lastDmxReadAddress < 513){
                     dmxReadOutput[lastDmxReadAddress+1] = receiveBuffer[i]; //assign output to dmx data
                 }
             }
+            break;
+        case SEND:
+            break;
+        default:
             break;
     }
 }
@@ -173,10 +187,16 @@ static void receiveDMXtask(void * parameters){
             case UART_DATA:
                 readUARTStream(receiveBuffer, &uartEvent);
                 break;
+            default:
+                break;
         }
     }
 
 }
+
+/**
+ *  @NOTE: The code below is now safe to use.
+ */
 
 /**
  * @brief configures the esp to send / receive dmx data.
@@ -203,6 +223,11 @@ esp_err_t initDMX(bool sendDMX) {
     gpio_set_level(rxtxDIR_PIN, sendDMX ? 1 : 0); // PULL OUTPUT DIR HIGH TO SEND
     sendDMXSemaphore = xSemaphoreCreateMutex();
 
+    //Check if the semaphore was successfully created.
+    if (sendDMXSemaphore == NULL) {
+        printf("Failed to create DMX semaphore\n");
+        return ESP_FAIL;
+    }
 
     esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 0, NULL, 0);
 
