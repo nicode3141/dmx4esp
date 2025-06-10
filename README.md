@@ -14,8 +14,6 @@ The DMX-512 Protocol is based on the RS-485 Standard as the physical layer for c
 
 
 
-this integration currently supports following chipsets: MAX485, 74HC04D
-
 ## Physical Layer: RS-485
 - **Differantial Communication** with **A/B data lines**
 - **Up to 1000m distance** without significant data loss
@@ -46,3 +44,5 @@ Any DMX Frame has to consist of the following components:
 | Mark After Break |  | 8µs | - | 1s |
 | Start Code | Baud-rate: 250kbps | 44µs | 44µs | 44µs |
 | Mark Time Between Frame | Idle | 0µs | 0µs | 1s |
+
+*NOTE: this integration currently supports following chipsets: MAX485, 74HC04D*
