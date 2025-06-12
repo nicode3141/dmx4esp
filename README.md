@@ -15,8 +15,8 @@ DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512
 
 ## Jump To
 
-- [DMX-512 explained](https://www.notion.so/dmx4esp-20ba3a3d9aac800ba796f944bef388c0?pvs=21)
-- [Getting Started](https://www.notion.so/dmx4esp-20ba3a3d9aac800ba796f944bef388c0?pvs=21)
+- [DMX-512 explained](#about-dmx-512)
+- [Getting Started](#getting-started)
 
 --- 
 
