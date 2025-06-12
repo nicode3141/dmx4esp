@@ -162,6 +162,8 @@ for(;;){
 
 *Note: further examples are in the `examples`  directory.*
 
+**For full documentation, see the [Doxygen documentation](https://nicode3141.github.io/dmx4esp/doxygen/html/dmx4esp_8c.html)**.
+
 ## References
 
 https://community.element14.com/technologies/open-source-hardware/b/blog/posts/dmx-explained-dmx512-and-rs-485-protocol-detail-for-lighting-applications
