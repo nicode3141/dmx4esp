@@ -1,0 +1,470 @@
+\doxysection{src/dmx4esp.c File Reference}
+\hypertarget{dmx4esp_8c}{}\label{dmx4esp_8c}\index{src/dmx4esp.c@{src/dmx4esp.c}}
+{\ttfamily \#include "{}dmx4esp.\+h"{}}\newline
+{\ttfamily \#include $<$stdio.\+h$>$}\newline
+{\ttfamily \#include $<$inttypes.\+h$>$}\newline
+{\ttfamily \#include "{}freertos/\+Free\+RTOS.\+h"{}}\newline
+{\ttfamily \#include "{}freertos/task.\+h"{}}\newline
+{\ttfamily \#include "{}freertos/queue.\+h"{}}\newline
+{\ttfamily \#include "{}driver/uart.\+h"{}}\newline
+{\ttfamily \#include "{}string.\+h"{}}\newline
+{\ttfamily \#include "{}driver/gpio.\+h"{}}\newline
+{\ttfamily \#include "{}esp\+\_\+mac.\+h"{}}\newline
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structdmx_pinout}{dmx\+Pinout}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \mbox{\hyperlink{dmx4esp_8c_ad5fe938854645f3b1cbd4e636feb18aa}{delay\+Break\+MICROSEC}}~250
+\item 
+\#define \mbox{\hyperlink{dmx4esp_8c_a1472af88f008ea6ce9d5aa152676a10c}{delay\+Mark\+MICROSEC}}~20
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Typedefs}
+\begin{DoxyCompactItemize}
+\item 
+typedef struct dmx\+Pinout \mbox{\hyperlink{dmx4esp_8c_ae0dbbbc2e1b45ee68a370e34edc40913}{dmx\+Pinout}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad}{DMXStatus}} \{ \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada67be7a5f47004345047b32fff72a2230}{SEND}}
+, \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada563f8ed00490ea22ea2605d9571dada8}{RECEIVE}}
+, \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada9524d094809858b9e4f778763913568a}{BREAK}}
+ \}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{dmx4esp_8c_a2a77b79a7c36a6f359dc8f751973fb79}{setup\+DMX}} (\mbox{\hyperlink{structdmx_pinout}{dmx\+Pinout}} pinout)
+\begin{DoxyCompactList}\small\item\em Configures the GPIO pins for DMX communication. \end{DoxyCompactList}\item 
+static void \mbox{\hyperlink{dmx4esp_8c_a4c9809450f429f59d980bfb37fe507b6}{send\+DMXPipeline}} (uint8\+\_\+t \texorpdfstring{$\ast$}{*}start\+Code)
+\begin{DoxyCompactList}\small\item\em Internal pipeline for sending current dmx data from internal uint8\+\_\+t dmx\+Packet\mbox{[}512\mbox{]} once. \end{DoxyCompactList}\item 
+static void \mbox{\hyperlink{dmx4esp_8c_ab5376f059292cfc0b51bcbc2d856d4b8}{send\+DMXtask}} (void \texorpdfstring{$\ast$}{*}parameters)
+\begin{DoxyCompactList}\small\item\em Internal loop to send dmx continuously. \end{DoxyCompactList}\item 
+static void \mbox{\hyperlink{dmx4esp_8c_a40add5c5b579dddbec494822844370b5}{read\+UARTStream}} (uint8\+\_\+t \texorpdfstring{$\ast$}{*}receive\+Buffer, uart\+\_\+event\+\_\+t \texorpdfstring{$\ast$}{*}uart\+Event)
+\begin{DoxyCompactList}\small\item\em Internal function to decode the received uart stream into dmx data. \end{DoxyCompactList}\item 
+static void \mbox{\hyperlink{dmx4esp_8c_a0e85390b548ce0937b685f5928f3849f}{receive\+DMXtask}} (void \texorpdfstring{$\ast$}{*}parameters)
+\begin{DoxyCompactList}\small\item\em Internal handler for receiving dmx. \end{DoxyCompactList}\item 
+esp\+\_\+err\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a2d11d67dd9c47557eaf228a483c0eb93}{init\+DMX}} (bool \mbox{\hyperlink{dmx4esp_8c_ae9d331f6cd18a5f15a6ec557bc10c3ad}{send\+DMX}})
+\begin{DoxyCompactList}\small\item\em configures the esp to send / receive dmx data. This function can be called multiple times. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{dmx4esp_8c_a1d06cbccbb0f1d32c8c6c54bdb085bc2}{clear\+DMXQueue}} ()
+\begin{DoxyCompactList}\small\item\em Clears the uart input buffer. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{dmx4esp_8c_ae9d331f6cd18a5f15a6ec557bc10c3ad}{send\+DMX}} (uint8\+\_\+t DMXStream\mbox{[}$\,$\mbox{]})
+\begin{DoxyCompactList}\small\item\em This function only sets the dmx data to send! The actual data transfer happens in the init() function. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{dmx4esp_8c_a76eafa492828951235044cba40011339}{send\+Address}} (uint16\+\_\+t address, uint8\+\_\+t value)
+\begin{DoxyCompactList}\small\item\em Changes the value of any given dmx channel. This function only sets the data to send! \end{DoxyCompactList}\item 
+uint8\+\_\+t \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{dmx4esp_8c_ac999d9d0d06baf933cdbdb3813eac835}{read\+DMX}} ()
+\begin{DoxyCompactList}\small\item\em Retuns a received dmx signal (once). \end{DoxyCompactList}\item 
+uint8\+\_\+t \mbox{\hyperlink{dmx4esp_8c_aa3c50bbcdc07097c2f33f6d3228043ee}{read\+Address}} (uint16\+\_\+t address)
+\begin{DoxyCompactList}\small\item\em Retuns a received dmx channel (once). \end{DoxyCompactList}\item 
+uint8\+\_\+t \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{dmx4esp_8c_ab3d1bcca664bc3f04343a97139891021}{read\+Fixture}} (uint16\+\_\+t start\+Address, uint16\+\_\+t footprint)
+\begin{DoxyCompactList}\small\item\em Retuns a range of the original dmx data. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+static const int \mbox{\hyperlink{dmx4esp_8c_ab70a1f197ddf2f2df34bc56e83b0bdbb}{RX\+\_\+\+BUF\+\_\+\+SIZE}} = 512
+\item 
+static Semaphore\+Handle\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a9f94cbfe9b1cf173b3d781a08567a90d}{send\+DMXSemaphore}}
+\item 
+static Task\+Handle\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a246c6831f94ccc5f724e6d483a33283f}{dmx\+Operations\+Task\+Handle}}
+\item 
+static gpio\+\_\+num\+\_\+t \mbox{\hyperlink{dmx4esp_8c_ade08e12bc04a0dc641a60fb4d20d10fc}{TXD\+\_\+\+PIN}} = GPIO\+\_\+\+NUM\+\_\+\+NC
+\item 
+static gpio\+\_\+num\+\_\+t \mbox{\hyperlink{dmx4esp_8c_aeef690842b6a555c1640eddb5539101e}{RXD\+\_\+\+PIN}} = GPIO\+\_\+\+NUM\+\_\+\+NC
+\item 
+static gpio\+\_\+num\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a5d8e5aa632815aa2dce8b673fb48087d}{rxtx\+DIR\+\_\+\+PIN}} = GPIO\+\_\+\+NUM\+\_\+\+NC
+\item 
+static const uart\+\_\+port\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a3052b0cc04a506051ea9160dd2e6a634}{UART\+\_\+\+PORT}} = UART\+\_\+\+NUM\+\_\+2
+\item 
+static enum \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad}{DMXStatus}} \mbox{\hyperlink{dmx4esp_8c_ac5027701eab5372f12dcf6c2bcccb70a}{dmx\+Status}} = \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada67be7a5f47004345047b32fff72a2230}{SEND}}
+\item 
+static uint8\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a3af084dece9b97c5674adcdbef8c3c3f}{dmx\+Packet}} \mbox{[}512\mbox{]}
+\item 
+static uint8\+\_\+t \mbox{\hyperlink{dmx4esp_8c_a7c70de70b71b70a5b0c8c7a56f986dc5}{dmx\+Read\+Output}} \mbox{[}512\mbox{]}
+\item 
+static uint16\+\_\+t \mbox{\hyperlink{dmx4esp_8c_ac926dee2e49ec8bd1263214308439e69}{last\+Dmx\+Read\+Address}} = 0
+\end{DoxyCompactItemize}
+
+
+\label{doc-define-members}
+\Hypertarget{dmx4esp_8c_doc-define-members}
+\doxysubsection{Macro Definition Documentation}
+\Hypertarget{dmx4esp_8c_ad5fe938854645f3b1cbd4e636feb18aa}\index{dmx4esp.c@{dmx4esp.c}!delayBreakMICROSEC@{delayBreakMICROSEC}}
+\index{delayBreakMICROSEC@{delayBreakMICROSEC}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{delayBreakMICROSEC}{delayBreakMICROSEC}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ad5fe938854645f3b1cbd4e636feb18aa} 
+\#define delay\+Break\+MICROSEC~250}
+
+\Hypertarget{dmx4esp_8c_a1472af88f008ea6ce9d5aa152676a10c}\index{dmx4esp.c@{dmx4esp.c}!delayMarkMICROSEC@{delayMarkMICROSEC}}
+\index{delayMarkMICROSEC@{delayMarkMICROSEC}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{delayMarkMICROSEC}{delayMarkMICROSEC}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a1472af88f008ea6ce9d5aa152676a10c} 
+\#define delay\+Mark\+MICROSEC~20}
+
+
+
+\label{doc-typedef-members}
+\Hypertarget{dmx4esp_8c_doc-typedef-members}
+\doxysubsection{Typedef Documentation}
+\Hypertarget{dmx4esp_8c_ae0dbbbc2e1b45ee68a370e34edc40913}\index{dmx4esp.c@{dmx4esp.c}!dmxPinout@{dmxPinout}}
+\index{dmxPinout@{dmxPinout}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{dmxPinout}{dmxPinout}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ae0dbbbc2e1b45ee68a370e34edc40913} 
+typedef struct dmx\+Pinout dmx\+Pinout}
+
+DMX 
+
+\label{doc-enum-members}
+\Hypertarget{dmx4esp_8c_doc-enum-members}
+\doxysubsection{Enumeration Type Documentation}
+\Hypertarget{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad}\index{dmx4esp.c@{dmx4esp.c}!DMXStatus@{DMXStatus}}
+\index{DMXStatus@{DMXStatus}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{DMXStatus}{DMXStatus}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad} 
+enum \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad}{DMXStatus}}}
+
+\begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{SEND@{SEND}!dmx4esp.c@{dmx4esp.c}}\index{dmx4esp.c@{dmx4esp.c}!SEND@{SEND}}}\Hypertarget{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada67be7a5f47004345047b32fff72a2230}\label{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada67be7a5f47004345047b32fff72a2230} 
+SEND&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{RECEIVE@{RECEIVE}!dmx4esp.c@{dmx4esp.c}}\index{dmx4esp.c@{dmx4esp.c}!RECEIVE@{RECEIVE}}}\Hypertarget{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada563f8ed00490ea22ea2605d9571dada8}\label{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada563f8ed00490ea22ea2605d9571dada8} 
+RECEIVE&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{BREAK@{BREAK}!dmx4esp.c@{dmx4esp.c}}\index{dmx4esp.c@{dmx4esp.c}!BREAK@{BREAK}}}\Hypertarget{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada9524d094809858b9e4f778763913568a}\label{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada9524d094809858b9e4f778763913568a} 
+BREAK&\\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\label{doc-func-members}
+\Hypertarget{dmx4esp_8c_doc-func-members}
+\doxysubsection{Function Documentation}
+\Hypertarget{dmx4esp_8c_a1d06cbccbb0f1d32c8c6c54bdb085bc2}\index{dmx4esp.c@{dmx4esp.c}!clearDMXQueue@{clearDMXQueue}}
+\index{clearDMXQueue@{clearDMXQueue}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{clearDMXQueue()}{clearDMXQueue()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a1d06cbccbb0f1d32c8c6c54bdb085bc2} 
+void clear\+DMXQueue (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Clears the uart input buffer. 
+
+\begin{DoxyNote}{Note}
+This function is only expected to be used internally. 
+\end{DoxyNote}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_a2d11d67dd9c47557eaf228a483c0eb93}\index{dmx4esp.c@{dmx4esp.c}!initDMX@{initDMX}}
+\index{initDMX@{initDMX}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{initDMX()}{initDMX()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a2d11d67dd9c47557eaf228a483c0eb93} 
+esp\+\_\+err\+\_\+t init\+DMX (\begin{DoxyParamCaption}\item[{bool}]{send\+DMX}{}\end{DoxyParamCaption})}
+
+
+
+configures the esp to send / receive dmx data. This function can be called multiple times. 
+
+@\+NOTE\+: The code below is now safe to use. 
+
+\begin{DoxyNote}{Note}
+sends / reads a dmx\+Signal concurrently! 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em send\+DMX} & if true, send dmx forever. Otherwise read dmx. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_aa3c50bbcdc07097c2f33f6d3228043ee}\index{dmx4esp.c@{dmx4esp.c}!readAddress@{readAddress}}
+\index{readAddress@{readAddress}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{readAddress()}{readAddress()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_aa3c50bbcdc07097c2f33f6d3228043ee} 
+uint8\+\_\+t read\+Address (\begin{DoxyParamCaption}\item[{uint16\+\_\+t}]{address}{}\end{DoxyParamCaption})}
+
+
+
+Retuns a received dmx channel (once). 
+
+\begin{DoxyNote}{Note}
+init() reads the dmx\+Signal concurrently! 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em address} & The address of the dmx channel to read from (1 -\/ 512)\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+dmx\+Output -\/ data of the dmx channel (0 -\/ 255) 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_ac999d9d0d06baf933cdbdb3813eac835}\index{dmx4esp.c@{dmx4esp.c}!readDMX@{readDMX}}
+\index{readDMX@{readDMX}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{readDMX()}{readDMX()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ac999d9d0d06baf933cdbdb3813eac835} 
+uint8\+\_\+t \texorpdfstring{$\ast$}{*} read\+DMX (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+Retuns a received dmx signal (once). 
+
+\begin{DoxyNote}{Note}
+init() reads the dmx\+Signal concurrently!
+\end{DoxyNote}
+\begin{DoxyReturn}{Returns}
+dmx\+Output -\/ pointer to 512 bytes long array containing the dmx data received. 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_ab3d1bcca664bc3f04343a97139891021}\index{dmx4esp.c@{dmx4esp.c}!readFixture@{readFixture}}
+\index{readFixture@{readFixture}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{readFixture()}{readFixture()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ab3d1bcca664bc3f04343a97139891021} 
+uint8\+\_\+t \texorpdfstring{$\ast$}{*} read\+Fixture (\begin{DoxyParamCaption}\item[{uint16\+\_\+t}]{start\+Address}{, }\item[{uint16\+\_\+t}]{footprint}{}\end{DoxyParamCaption})}
+
+
+
+Retuns a range of the original dmx data. 
+
+\begin{DoxyNote}{Note}
+please make sure that the start\+Address and footprint don\textquotesingle{}t exceed the maximum of channels! (512) 
+
+init() reads the dmx\+Signal concurrently! 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em start\+Address} & The first address to read from (1 -\/ 512) \\
+\hline
+{\em footprint} & number of channels needed to read from (1 -\/ 512)\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+dmx\+Output -\/ data of the dmx channels. IMPORTANT! free memory after use! 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_a40add5c5b579dddbec494822844370b5}\index{dmx4esp.c@{dmx4esp.c}!readUARTStream@{readUARTStream}}
+\index{readUARTStream@{readUARTStream}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{readUARTStream()}{readUARTStream()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a40add5c5b579dddbec494822844370b5} 
+void read\+UARTStream (\begin{DoxyParamCaption}\item[{uint8\+\_\+t \texorpdfstring{$\ast$}{*}}]{receive\+Buffer}{, }\item[{uart\+\_\+event\+\_\+t \texorpdfstring{$\ast$}{*}}]{uart\+Event}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Internal function to decode the received uart stream into dmx data. 
+
+\DoxyHorRuler{0}
+ -\/-\/-\/--- The DMX READ feature is CURRENTLY NOT SUPPORTED! -\/-\/-\/-\/---
+
+The implementation below is unreliable due to timing problems with the esp32 development boards \hypertarget{dmx4esp_8c_autotoc_md0}{}\doxysubsubsection{\texorpdfstring{and lack of development time.}{and lack of development time.}}\label{dmx4esp_8c_autotoc_md0}
+\begin{DoxyNote}{Note}
+This function is only expected to be used internally. 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em receive\+Buffer} & Pointer to the buffer where the received dmx data should be written to. \\
+\hline
+{\em uart\+Event} & Pointer to the Event structure used in UART event queue.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_a0e85390b548ce0937b685f5928f3849f}\index{dmx4esp.c@{dmx4esp.c}!receiveDMXtask@{receiveDMXtask}}
+\index{receiveDMXtask@{receiveDMXtask}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{receiveDMXtask()}{receiveDMXtask()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a0e85390b548ce0937b685f5928f3849f} 
+void receive\+DMXtask (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{parameters}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Internal handler for receiving dmx. 
+
+\begin{DoxyNote}{Note}
+This function is only expected to be used internally.
+\end{DoxyNote}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_a76eafa492828951235044cba40011339}\index{dmx4esp.c@{dmx4esp.c}!sendAddress@{sendAddress}}
+\index{sendAddress@{sendAddress}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{sendAddress()}{sendAddress()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a76eafa492828951235044cba40011339} 
+void send\+Address (\begin{DoxyParamCaption}\item[{uint16\+\_\+t}]{address}{, }\item[{uint8\+\_\+t}]{value}{}\end{DoxyParamCaption})}
+
+
+
+Changes the value of any given dmx channel. This function only sets the data to send! 
+
+\begin{DoxyNote}{Note}
+init() sends the dmx\+Signal concurrently!
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em address} & The address of the dmx channel (1 -\/ 512) \\
+\hline
+{\em value} & The dmx value to send (0 -\/ 255) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_ae9d331f6cd18a5f15a6ec557bc10c3ad}\index{dmx4esp.c@{dmx4esp.c}!sendDMX@{sendDMX}}
+\index{sendDMX@{sendDMX}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{sendDMX()}{sendDMX()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ae9d331f6cd18a5f15a6ec557bc10c3ad} 
+void send\+DMX (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{DMXStream}{\mbox{[}$\,$\mbox{]}}\end{DoxyParamCaption})}
+
+
+
+This function only sets the dmx data to send! The actual data transfer happens in the init() function. 
+
+\begin{DoxyNote}{Note}
+init() sends the dmx\+Signal concurrently! 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em DMXStream} & 512 bytes long array containing the dmx data to send \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_a4c9809450f429f59d980bfb37fe507b6}\index{dmx4esp.c@{dmx4esp.c}!sendDMXPipeline@{sendDMXPipeline}}
+\index{sendDMXPipeline@{sendDMXPipeline}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{sendDMXPipeline()}{sendDMXPipeline()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a4c9809450f429f59d980bfb37fe507b6} 
+void send\+DMXPipeline (\begin{DoxyParamCaption}\item[{uint8\+\_\+t \texorpdfstring{$\ast$}{*}}]{start\+Code}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Internal pipeline for sending current dmx data from internal uint8\+\_\+t dmx\+Packet\mbox{[}512\mbox{]} once. 
+
+\begin{DoxyNote}{Note}
+This function is only expected to be used internally. 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em start\+Code} & Pointer to the start code, normally 0x00 for default control. Special cases covered in the README.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_ab5376f059292cfc0b51bcbc2d856d4b8}\index{dmx4esp.c@{dmx4esp.c}!sendDMXtask@{sendDMXtask}}
+\index{sendDMXtask@{sendDMXtask}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{sendDMXtask()}{sendDMXtask()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ab5376f059292cfc0b51bcbc2d856d4b8} 
+void send\+DMXtask (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{parameters}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Internal loop to send dmx continuously. 
+
+\begin{DoxyNote}{Note}
+This function is only expected to be used internally.
+\end{DoxyNote}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\Hypertarget{dmx4esp_8c_a2a77b79a7c36a6f359dc8f751973fb79}\index{dmx4esp.c@{dmx4esp.c}!setupDMX@{setupDMX}}
+\index{setupDMX@{setupDMX}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{setupDMX()}{setupDMX()}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a2a77b79a7c36a6f359dc8f751973fb79} 
+void setup\+DMX (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structdmx_pinout}{dmx\+Pinout}}}]{pinout}{}\end{DoxyParamCaption})}
+
+
+
+Configures the GPIO pins for DMX communication. 
+
+\begin{DoxyNote}{Note}
+To use the default pins, don\textquotesingle{}t call this function. 
+
+Library\textquotesingle{}s default pins are\+: TX-\/\texorpdfstring{$>$}{>}1 RX-\/3 dir-\/\texorpdfstring{$>$}{>}23 
+\end{DoxyNote}
+
+\begin{DoxyParams}{Parameters}
+{\em tx\+Pin} & The GPIO pin number for transmitting DMX data. \\
+\hline
+{\em rx\+Pin} & The GPIO pin number for receiving DMX data. \\
+\hline
+{\em rxtx\+Direction\+Pin} & The GPIO pin number for controlling the direction of the DMX communication.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+
+
+\label{doc-var-members}
+\Hypertarget{dmx4esp_8c_doc-var-members}
+\doxysubsection{Variable Documentation}
+\Hypertarget{dmx4esp_8c_a246c6831f94ccc5f724e6d483a33283f}\index{dmx4esp.c@{dmx4esp.c}!dmxOperationsTaskHandle@{dmxOperationsTaskHandle}}
+\index{dmxOperationsTaskHandle@{dmxOperationsTaskHandle}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{dmxOperationsTaskHandle}{dmxOperationsTaskHandle}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a246c6831f94ccc5f724e6d483a33283f} 
+Task\+Handle\+\_\+t dmx\+Operations\+Task\+Handle\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_a3af084dece9b97c5674adcdbef8c3c3f}\index{dmx4esp.c@{dmx4esp.c}!dmxPacket@{dmxPacket}}
+\index{dmxPacket@{dmxPacket}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{dmxPacket}{dmxPacket}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a3af084dece9b97c5674adcdbef8c3c3f} 
+uint8\+\_\+t dmx\+Packet\mbox{[}512\mbox{]}\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_a7c70de70b71b70a5b0c8c7a56f986dc5}\index{dmx4esp.c@{dmx4esp.c}!dmxReadOutput@{dmxReadOutput}}
+\index{dmxReadOutput@{dmxReadOutput}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{dmxReadOutput}{dmxReadOutput}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a7c70de70b71b70a5b0c8c7a56f986dc5} 
+uint8\+\_\+t dmx\+Read\+Output\mbox{[}512\mbox{]}\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_ac5027701eab5372f12dcf6c2bcccb70a}\index{dmx4esp.c@{dmx4esp.c}!dmxStatus@{dmxStatus}}
+\index{dmxStatus@{dmxStatus}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{dmxStatus}{dmxStatus}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ac5027701eab5372f12dcf6c2bcccb70a} 
+enum \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad}{DMXStatus}} dmx\+Status = \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada67be7a5f47004345047b32fff72a2230}{SEND}}\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_ac926dee2e49ec8bd1263214308439e69}\index{dmx4esp.c@{dmx4esp.c}!lastDmxReadAddress@{lastDmxReadAddress}}
+\index{lastDmxReadAddress@{lastDmxReadAddress}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{lastDmxReadAddress}{lastDmxReadAddress}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ac926dee2e49ec8bd1263214308439e69} 
+uint16\+\_\+t last\+Dmx\+Read\+Address = 0\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_ab70a1f197ddf2f2df34bc56e83b0bdbb}\index{dmx4esp.c@{dmx4esp.c}!RX\_BUF\_SIZE@{RX\_BUF\_SIZE}}
+\index{RX\_BUF\_SIZE@{RX\_BUF\_SIZE}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{RX\_BUF\_SIZE}{RX\_BUF\_SIZE}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ab70a1f197ddf2f2df34bc56e83b0bdbb} 
+const int RX\+\_\+\+BUF\+\_\+\+SIZE = 512\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_aeef690842b6a555c1640eddb5539101e}\index{dmx4esp.c@{dmx4esp.c}!RXD\_PIN@{RXD\_PIN}}
+\index{RXD\_PIN@{RXD\_PIN}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{RXD\_PIN}{RXD\_PIN}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_aeef690842b6a555c1640eddb5539101e} 
+gpio\+\_\+num\+\_\+t RXD\+\_\+\+PIN = GPIO\+\_\+\+NUM\+\_\+\+NC\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_a5d8e5aa632815aa2dce8b673fb48087d}\index{dmx4esp.c@{dmx4esp.c}!rxtxDIR\_PIN@{rxtxDIR\_PIN}}
+\index{rxtxDIR\_PIN@{rxtxDIR\_PIN}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{rxtxDIR\_PIN}{rxtxDIR\_PIN}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a5d8e5aa632815aa2dce8b673fb48087d} 
+gpio\+\_\+num\+\_\+t rxtx\+DIR\+\_\+\+PIN = GPIO\+\_\+\+NUM\+\_\+\+NC\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_a9f94cbfe9b1cf173b3d781a08567a90d}\index{dmx4esp.c@{dmx4esp.c}!sendDMXSemaphore@{sendDMXSemaphore}}
+\index{sendDMXSemaphore@{sendDMXSemaphore}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{sendDMXSemaphore}{sendDMXSemaphore}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a9f94cbfe9b1cf173b3d781a08567a90d} 
+Semaphore\+Handle\+\_\+t send\+DMXSemaphore\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_ade08e12bc04a0dc641a60fb4d20d10fc}\index{dmx4esp.c@{dmx4esp.c}!TXD\_PIN@{TXD\_PIN}}
+\index{TXD\_PIN@{TXD\_PIN}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{TXD\_PIN}{TXD\_PIN}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_ade08e12bc04a0dc641a60fb4d20d10fc} 
+gpio\+\_\+num\+\_\+t TXD\+\_\+\+PIN = GPIO\+\_\+\+NUM\+\_\+\+NC\hspace{0.3cm}{\ttfamily [static]}}
+
+\Hypertarget{dmx4esp_8c_a3052b0cc04a506051ea9160dd2e6a634}\index{dmx4esp.c@{dmx4esp.c}!UART\_PORT@{UART\_PORT}}
+\index{UART\_PORT@{UART\_PORT}!dmx4esp.c@{dmx4esp.c}}
+\doxysubsubsection{\texorpdfstring{UART\_PORT}{UART\_PORT}}
+{\footnotesize\ttfamily \label{dmx4esp_8c_a3052b0cc04a506051ea9160dd2e6a634} 
+const uart\+\_\+port\+\_\+t UART\+\_\+\+PORT = UART\+\_\+\+NUM\+\_\+2\hspace{0.3cm}{\ttfamily [static]}}
+

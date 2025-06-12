@@ -1,0 +1,35 @@
+\doxysection{dmx4esp.\+h}
+\hypertarget{dmx4esp_8h_source}{}\label{dmx4esp_8h_source}\index{src/include/dmx4esp.h@{src/include/dmx4esp.h}}
+\mbox{\hyperlink{dmx4esp_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ DMX\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ DMX\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}freertos/FreeRTOS.h"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}freertos/task.h"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ "{}driver/uart.h"{}}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ "{}string.h"{}}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ "{}driver/gpio.h"{}}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}esp\_mac.h"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{enum}\ \{\mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada67be7a5f47004345047b32fff72a2230}{SEND}},\ \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada563f8ed00490ea22ea2605d9571dada8}{RECEIVE}},\ \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ada9524d094809858b9e4f778763913568a}{BREAK}}\}\ \mbox{\hyperlink{dmx4esp_8c_af248faeae1075c4ce789af2b2924d6ad}{DMXStatus}};}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structdmx_pinout}{dmxPinout}}\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ gpio\_num\_t\ \mbox{\hyperlink{structdmx_pinout_a67f22842a9f475bdd979c81232af37c7}{tx}};}
+\DoxyCodeLine{00015\ \ \ \ \ gpio\_num\_t\ \mbox{\hyperlink{structdmx_pinout_a56f27cd7440ead12c2715cb9dd26d7bd}{rx}};}
+\DoxyCodeLine{00016\ \ \ \ \ gpio\_num\_t\ \mbox{\hyperlink{structdmx_pinout_a5f7aaa438ade6a8496975223ce8c17db}{dir}};}
+\DoxyCodeLine{00017\ \}\ \mbox{\hyperlink{structdmx_pinout}{dmxPinout}};}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{dmx4esp_8h_a2a77b79a7c36a6f359dc8f751973fb79}{setupDMX}}(\mbox{\hyperlink{structdmx_pinout}{dmxPinout}}\ pinout);}
+\DoxyCodeLine{00020\ esp\_err\_t\ \mbox{\hyperlink{dmx4esp_8h_a2d11d67dd9c47557eaf228a483c0eb93}{initDMX}}(\textcolor{keywordtype}{bool}\ \mbox{\hyperlink{dmx4esp_8c_ae9d331f6cd18a5f15a6ec557bc10c3ad}{sendDMX}});}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{dmx4esp_8h_ae9d331f6cd18a5f15a6ec557bc10c3ad}{sendDMX}}(uint8\_t\ DMXStream[]);}
+\DoxyCodeLine{00023\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{dmx4esp_8h_a76eafa492828951235044cba40011339}{sendAddress}}(uint16\_t\ address,\ uint8\_t\ value);}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ uint8\_t\ \mbox{\hyperlink{dmx4esp_8h_af71fb8644b4661ac38bfe4419745f5ac}{readDMX}}();}
+\DoxyCodeLine{00026\ uint8\_t\ \mbox{\hyperlink{dmx4esp_8h_aa3c50bbcdc07097c2f33f6d3228043ee}{readAddress}}(uint16\_t\ address);}
+\DoxyCodeLine{00027\ uint8\_t\ \mbox{\hyperlink{dmx4esp_8h_aeeb36a0bef5023c55cb78d75dc2bebba}{readFixture}}(uint16\_t\ startAddress,\ uint16\_t\ footprint);}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}
