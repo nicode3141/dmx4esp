@@ -1,0 +1,4 @@
+var annotated_dup =
+[
+    [ "dmxPinout", "structdmx_pinout.html", null ]
+];

@@ -1,0 +1,4 @@
+var searchData=
+[
+  ['time_0',['and lack of development time.',['../dmx4esp_8c.html#autotoc_md0',1,'']]]
+];

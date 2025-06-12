@@ -18,14 +18,13 @@
 static const int RX_BUF_SIZE = 512;
 
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
-static QueueHandle_t dmxQueue;
 static SemaphoreHandle_t sendDMXSemaphore; //semaphore in form of a Mutex
 static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
 
-//default pinout
-static gpio_num_t TXD_PIN = GPIO_NUM_1;
-static gpio_num_t RXD_PIN = GPIO_NUM_3;
-static gpio_num_t rxtxDIR_PIN = GPIO_NUM_23;
+//define pinout
+static gpio_num_t TXD_PIN = GPIO_NUM_NC;
+static gpio_num_t RXD_PIN = GPIO_NUM_NC;
+static gpio_num_t rxtxDIR_PIN = GPIO_NUM_NC;
 static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART_NUM_0 is connected to Serial UART Interface
 
 //UART DMX Communication Protocol
@@ -214,6 +213,12 @@ esp_err_t initDMX(bool sendDMX) {
         .stop_bits = UART_STOP_BITS_2,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
     };
+
+    //Check if pins are defined
+    if(TXD_PIN == GPIO_NUM_NC || RXD_PIN == GPIO_NUM_NC || rxtxDIR_PIN == GPIO_NUM_NC){
+        printf("No pinout present, please define use setupDMX() first! \n");
+        return ESP_FAIL;
+    }
     
     uart_param_config(UART_PORT, &uart_config);
     uart_set_pin(UART_PORT, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
@@ -309,7 +314,7 @@ uint8_t* readDMX(){
  * @return dmxOutput - data of the dmx channel (0 - 255) 
  */
 uint8_t readAddress(uint16_t address){
-    if(address >= 1 || address <= 512){
+    if(address >= 1 && address <= 512){
         return dmxReadOutput[address];
     } else{
         printf("Address out of scope (1 - 512): %i", address);
