@@ -1,4 +1,4 @@
-![Static Badge](https://img.shields.io/badge/esp_idf-%3E%3D%204.3-8A2BE2)
+![Static Badge](https://img.shields.io/badge/esp_idf-%3E%3D%204.3-8A2BE2.svg) ![Static Badge](https://img.shields.io/badge/license-MIT-428f7e.svg?logo=open%20source%20initiative&logoColor=white&labelColor=555555)
 
 # DMX4ESP - DMX Library for esp32
 DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512 data using any esp32 microcontroller.
