@@ -7,7 +7,7 @@ DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512
 
 ✅ Send DMX-512 data
 
-❌ Receive DMX-512 data (experimental)
+⚠️ Receive DMX-512 data (experimental)
 
 ✅ Uses esp32 hardware UART
 
@@ -22,7 +22,7 @@ DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512
 
 ## About DMX-512
 
-DMX-512 (Digital Multiplex) is the standard protocol used in the entertainment and lighting industry for example to controll stage lighting, effects and other devices. It was developed by the Engineering Commission of the United States Institute for Theatre Technology (USITT) in 1986.
+DMX-512 (Digital Multiplex) is the standard protocol used in the entertainment and lighting industry for example to control stage lighting, effects and other devices. It was developed by the Engineering Commission of the United States Institute for Theatre Technology (USITT) in 1986.
 
 ## DMX512-A Technical Specifiations
 
@@ -45,7 +45,7 @@ The DMX-512 Protocol is based on the RS-485 Standard as the physical layer for c
 
 
 ## Physical Layer: RS-485
-- **Differantial Communication** with **A/B data lines**
+- **Differential Communication** with **A/B data lines**
 - **Up to 1000m distance** without significant data loss
 - **Noise immunity**
 
@@ -65,7 +65,7 @@ Any DMX Frame has to consist of the following components:
     - Normally 0x00 for default control
     - <a href="#start-codes" style="color: black; text-decoration: underline;text-decoration-style: line;">See examples for other usecases</a>
 5. **DMX Data** (512 Bytes)
-    - Data of each 512 DMX Channels with a 8-bit resolution (0 - 255)
+    - Data of each 512 DMX Channels with an 8-bit resolution (0 - 255)
 
 ![timing diagram of a dmx-512 data stream](./assets/dmx-diagram.gif)
 
@@ -142,7 +142,7 @@ initDMX(true); //true => DMX send mode
 //alt.: receive mode
 initDMX(false); //false => DMX receive mode 
 
-//now, the esp is constantly sending the internal stored dmx data (startup: blackout)
+//now, the esp is constantly sending the internally stored dmx data (startup: blackout)
 ```
 
 ### Send DMX data
