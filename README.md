@@ -67,9 +67,9 @@ Any DMX Frame has to consist of the following components:
 5. **DMX Data** (512 Bytes)
     - Data of each 512 DMX Channels with a 8-bit resolution (0 - 255)
 
-![timing diagramm of a dmx-512 data stream](./assets/dmx-diagram.gif)
+![timing diagram of a dmx-512 data stream](./assets/dmx-diagram.gif)
 
-*timing diagramm of a dmx-512 data stream [1]*
+*timing diagram of a dmx-512 data stream [1]*
 
 
 ## Timing
