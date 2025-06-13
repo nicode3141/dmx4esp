@@ -54,8 +54,8 @@ void sequence1(){
 void app_main(void){
     //configure pinout for rx, tx & direction ports
     dmxPinout dmxPins = {
-        .tx = GPIO_NUM_18,
-        .rx = GPIO_NUM_17,
+        .tx = GPIO_NUM_17,
+        .rx = GPIO_NUM_18,
         .dir = GPIO_NUM_1
     };
 
