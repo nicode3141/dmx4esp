@@ -7,7 +7,7 @@ DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512
 
 ✅ Send DMX-512 data
 
-⚠️ Receive DMX-512 data (experimental)
+❌ Receive DMX-512 data (not supported, see the [dmx4esp experimenal version](https://github.com/nicode3141/dmx4esp/tree/master) for details)
 
 ✅ Uses esp32 hardware UART
 
