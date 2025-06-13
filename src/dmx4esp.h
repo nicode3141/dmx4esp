@@ -8,7 +8,9 @@
 #include "driver/gpio.h"
 #include "esp_mac.h"
 
-typedef enum {SEND, RECEIVE, BREAK} DMXStatus;
+typedef enum {SEND, RECEIVE_DATA, BREAK, INACTIVE, DONE} DMXStatus;
+
+extern DMXStatus dmxStatus;
 
 typedef struct dmxPinout {
     gpio_num_t tx;
@@ -22,8 +24,8 @@ esp_err_t initDMX(bool sendDMX);
 void sendDMX(uint8_t DMXStream[]);
 void sendAddress(uint16_t address, uint8_t value);
 
-uint8_t readDMX();
+uint8_t* readDMX();
 uint8_t readAddress(uint16_t address);
-uint8_t readFixture(uint16_t startAddress, uint16_t footprint);
+uint8_t* readFixture(uint16_t startAddress, uint16_t footprint);
 
 #endif

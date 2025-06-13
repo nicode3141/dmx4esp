@@ -33,8 +33,7 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 #define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
 
 //enums needed for internal dmx decoding
-static enum DMXStatus {SEND, RECEIVE_DATA, BREAK, INACTIVE, DONE};
-static enum DMXStatus dmxStatus = SEND;
+DMXStatus dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
 static uint8_t dmxReadOutput[512]; //received packet
@@ -43,12 +42,6 @@ static uint16_t lastDmxReadAddress = 0;
 /**
 * DMX
 */
-
-typedef struct dmxPinout {
-    gpio_num_t tx;
-    gpio_num_t rx;
-    gpio_num_t dir;
-} dmxPinout;
 
 
 /**
@@ -147,6 +140,9 @@ static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
     if (size > RX_BUF_SIZE) size = RX_BUF_SIZE;
     int bytes_read = uart_read_bytes(UART_PORT, receiveBuffer, size, portMAX_DELAY); //read uart indefinitely
     
+    if(bytes_read == -1){
+        printf("error whilst reading from UART Buffer! \n");
+    }
 
 switch(dmxStatus){
          case BREAK:
@@ -161,7 +157,6 @@ switch(dmxStatus){
              break;
          case RECEIVE_DATA:
              for(int i = 0; i < uartEvent->size; i++){
-                ESP_LOGI("my_tag", " Address: %i Data: %i", i, receiveBuffer[i]);
 
                  if(lastDmxReadAddress >= 1 && lastDmxReadAddress <= 512){
                     
@@ -222,7 +217,6 @@ static void receiveDMXtask(void * parameters){
                 case UART_BUFFER_FULL:
                 case UART_FIFO_OVF:
                 default:
-                    ESP_LOGI("my_tag", "dmx INACTIVE");
                     xQueueReset(uart_queue);
                     uart_flush_input(UART_PORT);
                     dmxStatus = INACTIVE;

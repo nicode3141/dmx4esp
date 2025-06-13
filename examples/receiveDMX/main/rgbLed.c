@@ -22,8 +22,8 @@
 uint8_t receivedSignal[FIXTURE_FOOTPRINT];
 
 dmxPinout dmxPins = {
-    .tx = GPIO_NUM_43,
-    .rx = GPIO_NUM_44,
+    .tx = GPIO_NUM_17,
+    .rx = GPIO_NUM_18,
     .dir = GPIO_NUM_1
 };
 
@@ -75,23 +75,29 @@ void displayRGB(uint8_t dmxSignal[]){
 void app_main(void){    
     setup();
 
-    uint8_t receivedSignal[512] = {255, 255, 255, 255, 255};
-    
-    displayRGB(receivedSignal);
+   //array to store the dmx values
+    uint8_t receivedSignal[512];
 
-    /*
+    //update state
     for(;;){
-        uint8_t* readBuffer = readFixture(FIXTURE_ADDRESS, FIXTURE_FOOTPRINT);
-
+        
+        //get the current dmx frame as an array
+        uint8_t* readBuffer = readDMX();
+            
+        //check if operation was successfull
         if(readBuffer != NULL){
-            memcpy(receivedSignal, readBuffer, FIXTURE_FOOTPRINT);
+            //copy the received data into a static array
+            memcpy(receivedSignal, readBuffer, 512);
+                    
+            //important: free the dynamic buffer
             free(readBuffer);
-    
+            
             displayRGB(receivedSignal);
+
+            //wait a custom interval before reading
             vTaskDelay(REFRESH_RATE);
         }
-    }*/
+    }
 }
-
 
 
