@@ -45,11 +45,8 @@ void sequence1(){
 }
 
 /**
- * @brief Retuns a received dmx signal (once).
+ * @brief Example program to send DMX-512 data
  * 
- * @note  init() reads the dmxSignal concurrently!
- *    
- * @return dmxOutput - pointer to 512 bytes long array containing the dmx data received.
  */
 void app_main(void){
     //configure pinout for rx, tx & direction ports
