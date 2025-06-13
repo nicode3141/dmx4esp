@@ -7,7 +7,7 @@ DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512
 
 ✅ Send DMX-512 data
 
-❌ Receive DMX-512 data
+❌ Receive DMX-512 data (experimental)
 
 ✅ Uses esp32 hardware UART
 
@@ -23,6 +23,17 @@ DMX4ESP is a lightweight and efficient library for sending and receiving DMX-512
 ## About DMX-512
 
 DMX-512 (Digital Multiplex) is the standard protocol used in the entertainment and lighting industry for example to controll stage lighting, effects and other devices. It was developed by the Engineering Commission of the United States Institute for Theatre Technology (USITT) in 1986.
+
+## DMX512-A Technical Specifiations
+
+| **Category** | **Specification** |
+| :--- | :--- |
+| Standard Name | DMX512-A [(ANSI E1.11)](https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf) |
+| Physical Layer | RS-485 |
+| Channels | 512 Channels |
+| Baud Rate | 250 kbits/s |
+| Voltage | -7 to 12 V (RS-485) |
+| Data Resolution | 8-bits / Channel |
 
 ## DMX-512 Protocol
 
@@ -46,13 +57,19 @@ Any DMX Frame has to consist of the following components:
 1. **Break** Signal (>88µs)
     - Signals the start of the DMX packet
     - Set Break Signal by inversing the two data lines
-2. **Mark After Break** Signal (>88µs)
+2. **Mark After Break** Signal (>8µs)
     - Prepare receivers to receive data
-3. **Start Code** (1 Byte)
+3. **Channel Slots** (1 Byte)
+    - Slots for each Byte
+4. **Start Code** (1 Byte)
     - Normally 0x00 for default control
-    - See examples for other usecases
-4. **DMX Data** (512 Bytes)
+    - <a href="#start-codes" style="color: black; text-decoration: underline;text-decoration-style: line;">See examples for other usecases</a>
+5. **DMX Data** (512 Bytes)
     - Data of each 512 DMX Channels with a 8-bit resolution (0 - 255)
+
+![timing diagramm of a dmx-512 data stream](./assets/dmx-diagram.gif)
+
+*timing diagramm of a dmx-512 data stream [1]*
 
 
 ## Timing
@@ -64,6 +81,18 @@ Any DMX Frame has to consist of the following components:
 | Start Code | Baud-rate: 250kbps | 44µs | 44µs | 44µs |
 | Mark Time Between Frame | Idle | 0µs | 0µs | 1s |
 
+## Start Codes
+
+| **Hex** | **Description** | **Registered To** |
+| :--- | :--- | :--- |
+| 0x00 | Default Format to control lighting | USITT |
+| 0x55 | Network Test | E1 |
+| 0x17 | Text Packet | E1 / Artistic Licence (UK) Ltd. |
+| 0xCC | Remote Device Management | E1 |
+| 0xCF | System Information Packet | E1 |
+| 0xFF | Dimmer Curve Select | Avolites |
+
+*common start codes for DMX*
 
 ---
 
@@ -166,12 +195,13 @@ for(;;){
 
 ## References
 
+[1] https://www.dmx512.de/dmx512a/index.htm
+
 https://community.element14.com/technologies/open-source-hardware/b/blog/posts/dmx-explained-dmx512-and-rs-485-protocol-detail-for-lighting-applications
 
 https://hbernstaedt.de/__KnowHow/Steuersignale/Protokolle/DMX/DMX2/DMX2.htm
 
 https://wiki.production-partner.de/licht/lichtsteuerung-mit-dmx-512/
 
-https://www.dmx512.de/dmx512a/index.htm
 
 *NOTE: this integration currently supports following chipsets: MAX485, 74HC04D*
