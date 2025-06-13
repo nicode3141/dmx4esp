@@ -65,9 +65,10 @@ void app_main(void){
     //initialize to send DMX
     initDMX(true);
     
+    //blackout all channels
     memcpy(&currentDMX, &blackout, sizeof(blackout));
-
     sendDMX(currentDMX);
 
+    //execute demo sequence
     sequence1();
 }
