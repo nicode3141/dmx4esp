@@ -18,6 +18,7 @@
 static const int RX_BUF_SIZE = 512;
 
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
+ static QueueHandle_t uart_queue; //stores the event queue handle
 static SemaphoreHandle_t sendDMXSemaphore; //semaphore in form of a Mutex
 static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
 
@@ -32,7 +33,7 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 #define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
 
 //enums needed for internal dmx decoding
-static enum DMXStatus {SEND, RECEIVE, BREAK};
+static enum DMXStatus {SEND, RECEIVE_DATA, BREAK, INACTIVE, DONE};
 static enum DMXStatus dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
@@ -136,30 +137,51 @@ static void sendDMXtask(void * parameters){
  * 
  * @return void
  */
-static void readUARTStream(uint8_t *receiveBuffer, uart_event_t *uartEvent){
-    ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_PORT, (size_t*)&uartEvent->size)); //check for enough space to receive
-    uart_read_bytes(UART_PORT, receiveBuffer, uartEvent->size, portMAX_DELAY); //read uart indefinitely
+static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
+    /*esp_err_t enoughSpace = uart_get_buffered_data_len(UART_PORT, (size_t*)&uartEvent->size); //check for enough space to receive
 
-    switch(dmxStatus){
-        case BREAK:
-            if(receiveBuffer[0] == 0){
-                dmxStatus = RECEIVE;
-                lastDmxReadAddress = 0; //break -> DMX Stream starts at the beginning
-                break;
-            }
-            break;
-        case RECEIVE:
-            for(int i = 0; i < (int) uartEvent->size; i++){
-                if(lastDmxReadAddress < 513){
-                    dmxReadOutput[lastDmxReadAddress+1] = receiveBuffer[i]; //assign output to dmx data
-                }
-            }
-            break;
-        case SEND:
-            break;
+    if(enoughSpace != ESP_OK){
+        setDebugLED(255, 0, 0);
+    }*/
+    int size = uartEvent->size;
+    if (size > RX_BUF_SIZE) size = RX_BUF_SIZE;
+    int bytes_read = uart_read_bytes(UART_PORT, receiveBuffer, size, portMAX_DELAY); //read uart indefinitely
+    
+
+switch(dmxStatus){
+         case BREAK:
+             if(receiveBuffer[0] == 0){ // startBit -> 0x00
+                //setDebugLED(20, 0, 20);
+                //setDebugLED(0, 20, 20);
+                
+                 dmxStatus = RECEIVE_DATA;
+                 lastDmxReadAddress = 1; //break -> DMX Stream starts at the beginning
+                 break;
+             }
+             break;
+         case RECEIVE_DATA:
+             for(int i = 0; i < uartEvent->size; i++){
+                ESP_LOGI("my_tag", " Address: %i Data: %i", i, receiveBuffer[i]);
+
+                 if(lastDmxReadAddress >= 1 && lastDmxReadAddress <= 512){
+                    
+                    dmxReadOutput[lastDmxReadAddress] = receiveBuffer[i]; //assign output to dmx data
+                    
+
+                     
+                     lastDmxReadAddress++;
+
+                     if(lastDmxReadAddress > 512){
+                        dmxStatus = DONE;
+                        break;
+                     }
+                 } else{
+                    dmxStatus = DONE;
+                 }
+             }
         default:
-            break;
-    }
+             break;
+     }
 }
 
 
@@ -177,19 +199,39 @@ static void receiveDMXtask(void * parameters){
 
     for(;;){
         memset(receiveBuffer, 0, RX_BUF_SIZE); //clear buffer
-
-        switch(uartEvent.type){
-            case UART_BREAK:
-                dmxStatus = BREAK;
-                break;
-    
-            case UART_DATA:
-                readUARTStream(receiveBuffer, &uartEvent);
-                break;
-            default:
-                break;
+        if(xQueueReceive(uart_queue, (void *)&uartEvent, portMAX_DELAY) == pdTRUE){ //pdTRUE if an item got successfully received from the queue
+            
+            switch(uartEvent.type){
+                case UART_BREAK:
+                    if((dmxStatus == DONE)){
+                        uart_flush_input(UART_PORT);
+                        xQueueReset(uart_queue);
+                        dmxStatus = BREAK;
+                    } else if(dmxStatus == INACTIVE){
+                        uart_flush_input(UART_PORT);
+                        xQueueReset(uart_queue);
+                        dmxStatus = BREAK;
+                    } 
+                    dmxStatus = BREAK;
+                    break;
+                case UART_DATA:
+                    read_uart_stream(receiveBuffer, &uartEvent);
+                    break;
+                case UART_FRAME_ERR:
+                case UART_PARITY_ERR:
+                case UART_BUFFER_FULL:
+                case UART_FIFO_OVF:
+                default:
+                    ESP_LOGI("my_tag", "dmx INACTIVE");
+                    xQueueReset(uart_queue);
+                    uart_flush_input(UART_PORT);
+                    dmxStatus = INACTIVE;
+                    break;
+            }
+        } else{
+            
         }
-    }
+     }
 
 }
 
@@ -234,7 +276,13 @@ esp_err_t initDMX(bool sendDMX) {
         return ESP_FAIL;
     }
 
-    esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 0, NULL, 0);
+    esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 20, &uart_queue, 0);
+
+
+    // Check if uart_queue isn't a null pointer
+    if(uart_queue == NULL){
+        printf("Failed to set an event queue!\n");
+    }
 
     // Check if installation was successful
     if (result != ESP_OK) {
@@ -245,7 +293,7 @@ esp_err_t initDMX(bool sendDMX) {
         if(sendDMX){
             xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         } else{
-            xTaskCreatePinnedToCore(receiveDMXtask, "DMX Receive Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
+            xTaskCreatePinnedToCore(receiveDMXtask, "DMX Receive Task", 4096, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         }
     }
 

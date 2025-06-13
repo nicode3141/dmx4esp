@@ -13,60 +13,61 @@
 #define ARRAY_LENGTH_MACRO(a) (sizeof(a) / sizeof(a[0]))
 #define waitMS(a) vTaskDelay(a / portTICK_PERIOD_MS);
 
-void blackout(){
-    uint8_t blackout[512] = {0};
-    sendDMX(blackout);
-}
+//best practise: external array to store the current dmx stream to send, this helps to prevent accidental overwrites
+uint8_t currentDMX[512] = {0};
+uint8_t blackout[512] = {0};
 
-void fade_channels(){
-    float phase = 0.0f;
-    float spacing = 0.1f;
-
-    while(true){
-        for(int i = 1; i <= 512; i++){
-            float value = (sinf(phase + i * spacing) + 1.0f) * 127.5f;
-            sendAddress(i, (uint8_t)value);
-        }
-        phase += 0.1f;
-        waitMS(30);
-    }
-}
-
-void chase_channels(){
-    int counter = 0;
-    
-    counter++;
-    for(int i = 1; i <= 512; i++){
-        sendAddress(i == 1 ? 512 : i-1, 0);
-        sendAddress(i, 255);
-        waitMS(20);
-    }
-    waitMS(100);
-    blackout();
-    fade_channels();
-}
-
-void app_main(void){
-    uint8_t blackout[512] = {0};
-
-    initDMX(true);
-
-    sendAddress(1, 255); // PAN
+//DMX sequence example: controlling a moving head
+void sequence1(){
+    sendAddress(1, 255); // PAN -> 255 (max)
 
     waitMS(2000);
 
-    sendAddress(3, 255); // TILT
+    sendAddress(3, 255); // TILT -> 255 (max)
 
     waitMS(2000);
 
-    sendAddress(6, 255); // DIM
-    sendAddress(7, 255); // RED
+    sendAddress(6, 255); // DIM -> 255 (full)
+    sendAddress(7, 255); // RED -> 255 (full)
 
     waitMS(2000);
+
+    //Purple Hue 
+    sendAddress(7, 102);
+    sendAddress(8, 92);
+    sendAddress(9, 231);
+
+    waitMS(5000);
 
     sendDMX(blackout); // Blackout
 
     waitMS(2000);
+}
 
-    chase_channels();
+/**
+ * @brief Retuns a received dmx signal (once).
+ * 
+ * @note  init() reads the dmxSignal concurrently!
+ *    
+ * @return dmxOutput - pointer to 512 bytes long array containing the dmx data received.
+ */
+void app_main(void){
+    //configure pinout for rx, tx & direction ports
+    dmxPinout dmxPins = {
+        .tx = GPIO_NUM_18,
+        .rx = GPIO_NUM_17,
+        .dir = GPIO_NUM_1
+    };
+
+    //apply pinout
+    setupDMX(dmxPins);
+
+    //initialize to send DMX
+    initDMX(true);
+    
+    memcpy(&currentDMX, &blackout, sizeof(blackout));
+
+    sendDMX(currentDMX);
+
+    sequence1();
 }
