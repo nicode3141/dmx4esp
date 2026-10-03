@@ -10,6 +10,7 @@
 #include "esp_mac.h"
 #include "math.h"
 
+#define CONFIG_FREERTOS_HZ 100
 #define ARRAY_LENGTH_MACRO(a) (sizeof(a) / sizeof(a[0]))
 #define waitMS(a) vTaskDelay(a / portTICK_PERIOD_MS);
 
@@ -54,9 +55,9 @@ void sequence1(){
 void app_main(void){
     //configure pinout for rx, tx & direction ports
     dmxPinout dmxPins = {
-        .tx = GPIO_NUM_17,
-        .rx = GPIO_NUM_18,
-        .dir = GPIO_NUM_1
+        .tx = GPIO_NUM_9,
+        .rx = GPIO_NUM_10,
+        .dir = GPIO_NUM_27
     };
 
     //apply pinout
