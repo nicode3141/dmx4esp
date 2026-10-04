@@ -15,7 +15,9 @@
 #include "driver/gpio.h"
 #include "esp_mac.h"
 
-static const int RX_BUF_SIZE = 512;
+#define CONFIG_FREERTOS_HZ 100
+
+static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
 
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
  static QueueHandle_t uart_queue; //stores the event queue handle
@@ -36,7 +38,7 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 DMXStatus dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
-static uint8_t dmxReadOutput[512]; //received packet
+static uint8_t dmxReadOutput[513]; //received packet
 static uint16_t lastDmxReadAddress = 0;
 
 /**
@@ -131,52 +133,34 @@ static void sendDMXtask(void * parameters){
  * @return void
  */
 static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
-    /*esp_err_t enoughSpace = uart_get_buffered_data_len(UART_PORT, (size_t*)&uartEvent->size); //check for enough space to receive
-
-    if(enoughSpace != ESP_OK){
-        setDebugLED(255, 0, 0);
-    }*/
     int size = uartEvent->size;
     if (size > RX_BUF_SIZE) size = RX_BUF_SIZE;
-    int bytes_read = uart_read_bytes(UART_PORT, receiveBuffer, size, portMAX_DELAY); //read uart indefinitely
+    int bytes_read = uart_read_bytes(UART_PORT, receiveBuffer, size, 0); //read uart indefinitely
     
-    if(bytes_read == -1){
-        printf("error whilst reading from UART Buffer! \n");
+    if(bytes_read <= 0) return;
+
+    int startAdress = 0;
+
+    if(dmxStatus == BREAK){
+        if(receiveBuffer[0] != 0x00) return; // detect invalid startbit
+        dmxStatus = RECEIVE_DATA;
+
+        lastDmxReadAddress = 1;
+        startAdress = 1;
     }
 
-switch(dmxStatus){
-         case BREAK:
-             if(receiveBuffer[0] == 0){ // startBit -> 0x00
-                //setDebugLED(20, 0, 20);
-                //setDebugLED(0, 20, 20);
-                
-                 dmxStatus = RECEIVE_DATA;
-                 lastDmxReadAddress = 1; //break -> DMX Stream starts at the beginning
-                 break;
-             }
-             break;
-         case RECEIVE_DATA:
-             for(int i = 0; i < uartEvent->size; i++){
+    if(dmxStatus != RECEIVE_DATA) return;
 
-                 if(lastDmxReadAddress >= 1 && lastDmxReadAddress <= 512){
-                    
-                    dmxReadOutput[lastDmxReadAddress] = receiveBuffer[i]; //assign output to dmx data
-                    
+    for(int i = startAdress; i < bytes_read; i++){
+        if(lastDmxReadAddress > 512){
+            dmxStatus = DONE;
+            return;
+        }
+        dmxReadOutput[lastDmxReadAddress] = receiveBuffer[i];
+        lastDmxReadAddress++;
+    }
 
-                     
-                     lastDmxReadAddress++;
-
-                     if(lastDmxReadAddress > 512){
-                        dmxStatus = DONE;
-                        break;
-                     }
-                 } else{
-                    dmxStatus = DONE;
-                 }
-             }
-        default:
-             break;
-     }
+    if(lastDmxReadAddress > 512) dmxStatus = DONE;
 }
 
 
@@ -188,7 +172,7 @@ switch(dmxStatus){
  * @return void
  */
 static void receiveDMXtask(void * parameters){
-    uint8_t receiveBuffer[RX_BUF_SIZE]; //without malloc() -> static buffer
+    uint8_t receiveBuffer[RX_BUF_SIZE+1]; //without malloc() -> static buffer
 
     uart_event_t uartEvent;
 
@@ -198,15 +182,10 @@ static void receiveDMXtask(void * parameters){
             
             switch(uartEvent.type){
                 case UART_BREAK:
-                    if((dmxStatus == DONE)){
+                    if((dmxStatus == DONE) || (dmxStatus == INACTIVE)){
                         uart_flush_input(UART_PORT);
                         xQueueReset(uart_queue);
-                        dmxStatus = BREAK;
-                    } else if(dmxStatus == INACTIVE){
-                        uart_flush_input(UART_PORT);
-                        xQueueReset(uart_queue);
-                        dmxStatus = BREAK;
-                    } 
+                    }
                     dmxStatus = BREAK;
                     break;
                 case UART_DATA:
@@ -216,6 +195,9 @@ static void receiveDMXtask(void * parameters){
                 case UART_PARITY_ERR:
                 case UART_BUFFER_FULL:
                 case UART_FIFO_OVF:
+                    uart_flush_input(UART_PORT);
+                    xQueueReset(uart_queue);
+                    break;
                 default:
                     xQueueReset(uart_queue);
                     uart_flush_input(UART_PORT);
@@ -270,8 +252,8 @@ esp_err_t initDMX(bool sendDMX) {
         return ESP_FAIL;
     }
 
+    // install uart event queue driver
     esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 20, &uart_queue, 0);
-
 
     // Check if uart_queue isn't a null pointer
     if(uart_queue == NULL){
@@ -306,7 +288,8 @@ void clearDMXQueue(){
 
 /**
  * @brief This function only sets the dmx data to send!
- **       The actual data transfer happens in the init() function.  
+ **       The actual data transfer happens in the init() function.
+ *        Channel 1 is at array index 0! Max index is 511!
  * @note  init() sends the dmxSignal concurrently!
  * @param DMXStream 512 bytes long array containing the dmx data to send
  * @return void
@@ -341,7 +324,7 @@ void sendAddress(uint16_t address, uint8_t value){
  * 
  * @note  init() reads the dmxSignal concurrently!
  *    
- * @return dmxOutput - pointer to 512 bytes long array containing the dmx data received.
+ * @return dmxOutput - pointer to 513 bytes long array containing the dmx data received. First index is start byte.
  */
 uint8_t* readDMX(){
    return dmxReadOutput;

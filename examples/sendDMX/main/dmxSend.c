@@ -18,6 +18,29 @@
 uint8_t currentDMX[512] = {0};
 uint8_t blackout[512] = {0};
 
+void validate(){
+    uint8_t testData[512] = {0};
+
+    for(int i = 0; i < 256; i++){
+        testData[i] = i;
+    }
+
+    testData[256] = 0;
+    testData[257] = 255;
+    testData[258] = 0;
+    testData[259] = 255;
+
+    sendDMX(testData);
+
+    while(true){
+        sendAddress(260, 255);
+        waitMS(500);
+        sendAddress(260, 0);
+        waitMS(500);
+    }
+
+}
+
 //DMX sequence example: controlling a moving head
 void sequence1(){
     sendAddress(1, 255); // PAN -> 255 (max)
@@ -55,8 +78,8 @@ void sequence1(){
 void app_main(void){
     //configure pinout for rx, tx & direction ports
     dmxPinout dmxPins = {
-        .tx = GPIO_NUM_9,
-        .rx = GPIO_NUM_10,
+        .tx = GPIO_NUM_10,
+        .rx = GPIO_NUM_9,
         .dir = GPIO_NUM_27
     };
 
@@ -70,6 +93,5 @@ void app_main(void){
     memcpy(&currentDMX, &blackout, sizeof(blackout));
     sendDMX(currentDMX);
 
-    //execute demo sequence
-    sequence1();
+    validate();
 }

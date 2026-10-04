@@ -21,6 +21,7 @@
 
 uint8_t receivedSignal[FIXTURE_FOOTPRINT];
 
+// config for esp32-s3
 dmxPinout dmxPins = {
     .tx = GPIO_NUM_17,
     .rx = GPIO_NUM_18,
