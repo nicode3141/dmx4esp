@@ -1,8 +1,8 @@
 ![Static Badge](https://img.shields.io/badge/esp_idf-%3E%3D%204.3-8A2BE2.svg) ![Static Badge](https://img.shields.io/badge/license-MIT-428f7e.svg?logo=open%20source%20initiative&logoColor=white&labelColor=555555)
 
-# dmx4esp - DMX Library for esp32
+# dmx4esp - DMX Library for ESP32
 
-dmx4esp is a lightweight and efficient library for sending and receiving DMX-512 data using any esp32 microcontroller.
+dmx4esp is a lightweight and efficient library for sending and receiving DMX-512 data using any ESP32 microcontroller.
 
 ## Features
 
@@ -10,7 +10,7 @@ dmx4esp is a lightweight and efficient library for sending and receiving DMX-512
 
 - Receive DMX-512 data
 
-- Uses esp32 hardware UART
+- Uses ESP32 hardware UART
 
 - Compatible with ESP-IDF
 
