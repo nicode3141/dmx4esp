@@ -221,8 +221,12 @@ static void receiveDMXtask(void * parameters){
 static esp_err_t resetDMX(void){
     // Delete other running dmx operations
     if(dmxOperationsTaskHandle != NULL){
+        xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
+        xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
         vTaskDelete(dmxOperationsTaskHandle);
         dmxOperationsTaskHandle = NULL;
+        xSemaphoreGive(sendDMXSemaphore);
+        xSemaphoreGive(readDMXSemaphore);
     }
 
     // delete exsisting driver if any
