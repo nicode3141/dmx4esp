@@ -351,31 +351,35 @@ void sendAddress(uint16_t address, uint8_t value){
 }
 
 /**
- * @brief Retuns a received dmx signal (once).
+ * @brief Writes currently received dmx data to a provided array
  * 
- * @note  init() reads the dmxSignal concurrently!
- *    
- * @return dmxOutput - pointer to 513 bytes long array containing the dmx data received. First index is start byte.
+ * @param output the desired array to write dmx data to
  */
-uint8_t* readDMX(){
-   return dmxReadOutput;
+void readDMX(uint8_t output[513]){
+    if(readDMXSemaphore == NULL){ memset(output, 0, 513); return; }
+    xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
+    memcpy(output, dmxReadOutput, 513);
+    xSemaphoreGive(readDMXSemaphore);
 }
 
 /**
  * @brief Retuns a received dmx channel (once).
  * 
- * @note  init() reads the dmxSignal concurrently!
  * @param address The address of the dmx channel to read from (1 - 512)
  *    
  * @return dmxOutput - data of the dmx channel (0 - 255) 
  */
 uint8_t readAddress(uint16_t address){
-    if(address >= 1 && address <= 512){
-        return dmxReadOutput[address];
-    } else{
+    if(address < 1 || address > 512){
         printf("Address out of scope (1 - 512): %i", address);
         return 0;
     }
+    if(readDMXSemaphore == NULL) return 0;
+
+    xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
+    uint8_t output = dmxReadOutput[address];
+    xSemaphoreGive(readDMXSemaphore);
+    return output;
 }
 
 /**
@@ -404,7 +408,9 @@ uint8_t* readFixture(uint16_t startAddress, uint16_t footprint){
         return NULL;
     }
 
+    xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
     memcpy(fixtureData, &dmxReadOutput[startAddress], footprint); //copy a part of the original dmx output
+    xSemaphoreGive(readDMXSemaphore);
 
     return fixtureData;
 }
