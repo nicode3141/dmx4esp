@@ -16,6 +16,7 @@
 #include "esp_mac.h"
 #include "esp_rom_sys.h"
 #include "stdlib.h"
+#include "esp_check.h"
 
 static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
 
@@ -42,6 +43,8 @@ static uint8_t dmxPacket[512]; //send packet
 static uint8_t dmxReadOutput[513]; //received packet
 static uint16_t lastDmxReadAddress = 0;
 
+static const char* INIT_TAG = "UART_INIT";
+
 /**
 * DMX
 */
@@ -50,7 +53,6 @@ static uint16_t lastDmxReadAddress = 0;
 /**
  * @brief Configures the GPIO pins for DMX communication.
  **
- * @note To use the default pins, don't call this function.
  * @note Library's default pins are: TX->1 RX-3 dir->23
  * @param txPin The GPIO pin number for transmitting DMX data.
  * @param rxPin The GPIO pin number for receiving DMX data.
@@ -252,10 +254,10 @@ esp_err_t initDMX(bool sendDMX) {
         return ESP_FAIL;
     }
     
-    uart_param_config(UART_PORT, &uart_config);
-    uart_set_pin(UART_PORT, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    ESP_RETURN_ON_ERROR(uart_param_config(UART_PORT, &uart_config), INIT_TAG, "UART param config failed");
+    ESP_RETURN_ON_ERROR(uart_set_pin(UART_PORT, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE), INIT_TAG, "UART set pin failed");
 
-    gpio_set_direction(rxtxDIR_PIN, GPIO_MODE_OUTPUT);
+    ESP_RETURN_ON_ERROR(gpio_set_direction(rxtxDIR_PIN, GPIO_MODE_OUTPUT), INIT_TAG, "failed to set rxtxDIR_PIN as output");
     gpio_set_level(rxtxDIR_PIN, sendDMX ? 1 : 0);
 
     if(sendDMXSemaphore == NULL){
