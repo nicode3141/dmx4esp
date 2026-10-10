@@ -10,8 +10,6 @@
 
 typedef enum {SEND, RECEIVE_DATA, BREAK, INACTIVE, DONE} DMXStatus;
 
-extern DMXStatus dmxStatus;
-
 typedef struct dmxPinout {
     gpio_num_t tx;
     gpio_num_t rx;
@@ -24,7 +22,7 @@ esp_err_t initDMX(bool sendDMX);
 void sendDMX(uint8_t DMXStream[]);
 void sendAddress(uint16_t address, uint8_t value);
 
-void readDMX(uint8_t output);
+void readDMX(uint8_t output[513]);
 uint8_t readAddress(uint16_t address);
 void readFixture(uint8_t* output,uint16_t startAddress, uint16_t footprint);
 

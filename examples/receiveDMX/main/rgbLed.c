@@ -8,6 +8,7 @@
 #include "string.h"
 #include "driver/gpio.h"
 #include "esp_mac.h"
+#include "led_strip.h"
 
 #define ARRAY_LENGTH_MACRO(a) (sizeof(a) / sizeof(a[0]))
 
@@ -15,9 +16,10 @@
 #define FIXTURE_ADDRESS 1
 #define REFRESH_RATE 10
 
-#define LED_PIN_R 48
-#define LED_PIN_G 2
-#define LED_PIN_B 15
+#define LED_GPIO 48
+
+static led_strip_handle_t strip;
+
 
 uint8_t receivedSignal[FIXTURE_FOOTPRINT];
 
@@ -29,30 +31,21 @@ dmxPinout dmxPins = {
 };
 
 
-void setupLed(int channel, int gpioPin){
-    ledc_timer_config_t ledcTimer = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .duty_resolution = LEDC_TIMER_8_BIT, //0-256
-        .freq_hz = 5000,
-        .clk_cfg = LEDC_AUTO_CLK
-    };
-    ledc_timer_config(&ledcTimer);
-
-    ledc_channel_config_t ledcChannel = {
-        .gpio_num = gpioPin,
-        .channel = channel,
-        .duty = 0,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .intr_type = LEDC_INTR_DISABLE,
-        .hpoint = 0,
-    };
-    ledc_channel_config(&ledcChannel);
-}
 
 void setup(){
-    setupLed(LEDC_CHANNEL_0, LED_PIN_R);
-    setupLed(LEDC_CHANNEL_1, LED_PIN_G);
-    setupLed(LEDC_CHANNEL_2, LED_PIN_B);
+    led_strip_config_t cfg = {
+        .strip_gpio_num = LED_GPIO,
+        .max_leds = 1,
+        .led_model = LED_MODEL_WS2812,
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
+    };
+    led_strip_rmt_config_t rmt = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = 10 * 1000 * 1000,
+    };
+
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&cfg, &rmt, &strip));
+    led_strip_clear(strip);
 
     setupDMX(dmxPins);
     initDMX(false);
@@ -60,44 +53,21 @@ void setup(){
 
 // rgb is displayed via pwm duty cycles with ledc
 void displayRGB(uint8_t dmxSignal[]){
-    //Red
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, dmxSignal[0]);
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-    //Green
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, dmxSignal[1]);
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
-    //Blue
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, dmxSignal[2]);
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
-
-    printf("%d\n", dmxSignal[2]);
+    led_strip_set_pixel(strip, 0, dmxSignal[0], dmxSignal[1], dmxSignal[2]);
+    led_strip_refresh(strip);
 }
 
 void app_main(void){    
     setup();
 
-   //array to store the dmx values
-    uint8_t receivedSignal[512];
-
     //update state
     for(;;){
+        readFixture(receivedSignal, FIXTURE_ADDRESS, FIXTURE_FOOTPRINT);
+        displayRGB(receivedSignal);
         
-        //get the current dmx frame as an array
-        uint8_t* readBuffer = readDMX();
-            
-        //check if operation was successfull
-        if(readBuffer != NULL){
-            //copy the received data into a static array
-            memcpy(receivedSignal, readBuffer, 512);
-                    
-            //important: free the dynamic buffer
-            free(readBuffer);
-            
-            displayRGB(receivedSignal);
-
-            //wait a custom interval before reading
-            vTaskDelay(REFRESH_RATE);
-        }
+        //wait a custom interval before reading
+        vTaskDelay(REFRESH_RATE);
+        
     }
 }
 

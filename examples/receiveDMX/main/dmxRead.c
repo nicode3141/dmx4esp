@@ -42,28 +42,38 @@ void LOG(uint8_t *data){
     }
 }
 
-void app_main(void){    
+void test_read(uint8_t receivedSignal[513]){
+    //get the current dmx frame as an array
+    readDMX(receivedSignal);
+        
+    //copy the received data into a static array
+    LOG(receivedSignal);
+    uint8_t signal = receivedSignal[260];
+    gpio_set_level(LED_PIN, signal > 0 ? 1 : 0);
+    gpio_set_level(DEBUG_PIN, receivedSignal[258] == 255 ? 1 : 0);
+}
+
+void test_read_address(void){
+    uint8_t value = readAddress(260);
+    gpio_set_level(DEBUG_PIN, value == 255 ? 1 : 0);
+}
+
+void test_read_fixture(uint8_t fixureData[3]){
+    readFixture(fixureData, 258, 3);
+    uint8_t value = fixureData[2];
+    gpio_set_level(LED_PIN, value == 255 ? 1 : 0);
+}
+
+void app_main(void){
     setup();
 
    //array to store the dmx values
     uint8_t receivedSignal[513];
+    uint8_t fixtureData[3];
 
     //update state
     for(;;){
-        
-        //get the current dmx frame as an array
-        uint8_t* readBuffer = readDMX();
-            
-        //check if operation was successfull
-        if(readBuffer != NULL){
-            //copy the received data into a static array
-            memcpy(receivedSignal, readBuffer, sizeof(receivedSignal));
-            LOG(receivedSignal);
-            uint8_t signal = receivedSignal[260];
-            gpio_set_level(LED_PIN, signal > 0 ? 1 : 0);
-            gpio_set_level(DEBUG_PIN, receivedSignal[258] == 255 ? 1 : 0);
-        }
-
+        test_read(receivedSignal);
         //wait a custom interval before reading
         vTaskDelay(pdMS_TO_TICKS(10));
     }
