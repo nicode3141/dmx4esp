@@ -38,7 +38,7 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 #define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
 
 //enums needed for internal dmx decoding
-static volatile dmxStatus = SEND;
+static volatile DMXStatus dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
 static uint8_t dmxRxBuff[513]; //receive task writes bytes
@@ -222,7 +222,7 @@ static esp_err_t resetDMX(void){
     // Delete other running dmx operations
     if(dmxOperationsTaskHandle != NULL){
         vTaskDelete(dmxOperationsTaskHandle);
-        dmxOperationsTaskHandle == NULL;
+        dmxOperationsTaskHandle = NULL;
     }
 
     // delete exsisting driver if any
@@ -286,7 +286,7 @@ esp_err_t initDMX(bool sendDMX) {
     if(result != ESP_OK) return result;
 
     // install uart event queue driver
-    esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 20, &uart_queue, 0);
+    result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 20, &uart_queue, 0);
 
     // Check if uart_queue isn't a null pointer
     if(uart_queue == NULL){
@@ -383,34 +383,27 @@ uint8_t readAddress(uint16_t address){
 }
 
 /**
- * @brief Retuns a range of the original dmx data.
+ * @brief Writes a range of the received dmx data to a provided array.
  * 
  * @note please make sure that the startAddress and footprint don't exceed the maximum of channels! (512)
  * @note  init() reads the dmxSignal concurrently!
+ * @param output the desired array to write dmx data to
  * @param startAddress The first address to read from (1 - 512)
  * @param footprint number of channels needed to read from (1 - 512)
  *    
- * @return dmxOutput - data of the dmx channels. IMPORTANT! free memory after use!
  */
-uint8_t* readFixture(uint16_t startAddress, uint16_t footprint){
+void readFixture(uint8_t* output, uint16_t startAddress, uint16_t footprint){
     if(footprint < 1 || footprint > 512){
         printf("Footprint out of scope (1 - 512): %i", footprint);
-        return NULL;
+        return;
     }
     if(startAddress < 1 || startAddress + footprint > 513){
         printf("startAddress out of scope (1 - 512) / footprint exeeds scope: %i, footprint: %i, lastAddress: %i", startAddress, footprint, startAddress + footprint -1);
-        return NULL;
+        return;
     }
-
-    uint8_t* fixtureData = (uint8_t*) malloc(footprint); //dynamic allocation to the heap. CALLER HAS TO FREE MEMORY AFTER USE!
-    if(fixtureData == NULL){
-        printf("Memory allocation failed");
-        return NULL;
-    }
+    if(readDMXSemaphore == NULL) return;
 
     xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
-    memcpy(fixtureData, &dmxReadOutput[startAddress], footprint); //copy a part of the original dmx output
+    memcpy(output, &dmxReadOutput[startAddress], footprint); //copy a part of the original dmx output
     xSemaphoreGive(readDMXSemaphore);
-
-    return fixtureData;
 }

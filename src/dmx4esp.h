@@ -24,8 +24,8 @@ esp_err_t initDMX(bool sendDMX);
 void sendDMX(uint8_t DMXStream[]);
 void sendAddress(uint16_t address, uint8_t value);
 
-uint8_t* readDMX();
+void readDMX(uint8_t output);
 uint8_t readAddress(uint16_t address);
-uint8_t* readFixture(uint16_t startAddress, uint16_t footprint);
+void readFixture(uint8_t* output,uint16_t startAddress, uint16_t footprint);
 
 #endif
