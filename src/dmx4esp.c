@@ -23,6 +23,7 @@ static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
 static QueueHandle_t uart_queue; //stores the event queue handle
 static SemaphoreHandle_t sendDMXSemaphore; //semaphore in form of a Mutex
+static SemaphoreHandle_t readDMXSemaphore;
 static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
 static portMUX_TYPE dmx_break_lock = portMUX_INITIALIZER_UNLOCKED; //lock core while sending break signal
 
@@ -37,9 +38,10 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 #define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
 
 //enums needed for internal dmx decoding
-DMXStatus dmxStatus = SEND;
+static volatile dmxStatus = SEND;
 
 static uint8_t dmxPacket[512]; //send packet
+static uint8_t dmxRxBuff[513]; //receive task writes bytes
 static uint8_t dmxReadOutput[513]; //received packet
 static uint16_t lastDmxReadAddress = 0;
 
@@ -48,7 +50,6 @@ static const char* INIT_TAG = "UART_INIT";
 /**
 * DMX
 */
-
 
 /**
  * @brief Configures the GPIO pins for DMX communication.
@@ -144,6 +145,7 @@ static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
         if(receiveBuffer[0] != 0x00) return; // detect invalid startbit
         dmxStatus = RECEIVE_DATA;
 
+        dmxRxBuff[0] = receiveBuffer[0];
         lastDmxReadAddress = 1;
         startAdress = 1;
     }
@@ -155,7 +157,7 @@ static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
             dmxStatus = DONE;
             return;
         }
-        dmxReadOutput[lastDmxReadAddress] = receiveBuffer[i];
+        dmxRxBuff[lastDmxReadAddress] = receiveBuffer[i];
         lastDmxReadAddress++;
     }
 
@@ -189,6 +191,12 @@ static void receiveDMXtask(void * parameters){
                     break;
                 case UART_DATA:
                     read_uart_stream(receiveBuffer, &uartEvent);
+                    if(dmxStatus == DONE){
+                        xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
+                        memcpy(dmxReadOutput, dmxRxBuff, 513);
+                        xSemaphoreGive(readDMXSemaphore);
+                        dmxStatus = INACTIVE;
+                    }
                     break;
                 case UART_FRAME_ERR:
                 case UART_PARITY_ERR:
@@ -264,8 +272,12 @@ esp_err_t initDMX(bool sendDMX) {
         sendDMXSemaphore = xSemaphoreCreateMutex();
     }
 
+    if(readDMXSemaphore == NULL){
+        readDMXSemaphore = xSemaphoreCreateMutex();
+    }
+
     // Check if the semaphore was successfully created.
-    if (sendDMXSemaphore == NULL) {
+    if (sendDMXSemaphore == NULL || readDMXSemaphore == NULL) {
         printf("Failed to create DMX semaphore\n");
         return ESP_FAIL;
     }
