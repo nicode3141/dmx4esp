@@ -229,6 +229,9 @@ static esp_err_t resetDMX(void){
         xSemaphoreGive(readDMXSemaphore);
     }
 
+    dmxStatus = INACTIVE;
+    lastDmxReadAddress = 0;
+
     // delete exsisting driver if any
     if(uart_is_driver_installed(UART_PORT)){
         uart_set_line_inverse(UART_PORT, 0); // remove possible break sig
@@ -265,6 +268,9 @@ esp_err_t initDMX(bool sendDMX) {
         printf("No pinout present, please define use setupDMX() first! \n");
         return ESP_FAIL;
     }
+
+    esp_err_t result = resetDMX();
+    if(result != ESP_OK) return result;
     
     ESP_RETURN_ON_ERROR(uart_param_config(UART_PORT, &uart_config), INIT_TAG, "UART param config failed");
     ESP_RETURN_ON_ERROR(uart_set_pin(UART_PORT, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE), INIT_TAG, "UART set pin failed");
@@ -286,9 +292,6 @@ esp_err_t initDMX(bool sendDMX) {
         return ESP_FAIL;
     }
 
-    esp_err_t result = resetDMX();
-    if(result != ESP_OK) return result;
-
     // install uart event queue driver
     result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 20, &uart_queue, 0);
 
@@ -302,7 +305,7 @@ esp_err_t initDMX(bool sendDMX) {
         printf("Failed to install UART driver: %d\n", result);
     } else{
         if(sendDMX){
-            xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
+            xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 4096, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         } else{
             xTaskCreatePinnedToCore(receiveDMXtask, "DMX Receive Task", 4096, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         }
@@ -330,6 +333,7 @@ void clearDMXQueue(){
  * @return void
  */
 void sendDMX(uint8_t DMXStream[]){
+    if(sendDMXSemaphore == NULL) return;
     xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
     memcpy(dmxPacket, DMXStream, 512);
     xSemaphoreGive(sendDMXSemaphore);
@@ -345,6 +349,7 @@ void sendDMX(uint8_t DMXStream[]){
  * @return void
  */
 void sendAddress(uint16_t address, uint8_t value){
+    if(sendDMXSemaphore == NULL) return;
     if(address >= 1 && address <= 512){
         xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
         dmxPacket[address-1] = value;
