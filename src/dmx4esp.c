@@ -211,9 +211,26 @@ static void receiveDMXtask(void * parameters){
 
 }
 
-/**
- *  @NOTE: The code below is now safe to use.
- */
+static esp_err_t resetDMX(void){
+    // Delete other running dmx operations
+    if(dmxOperationsTaskHandle != NULL){
+        vTaskDelete(dmxOperationsTaskHandle);
+        dmxOperationsTaskHandle == NULL;
+    }
+
+    // delete exsisting driver if any
+    if(uart_is_driver_installed(UART_PORT)){
+        uart_set_line_inverse(UART_PORT, 0); // remove possible break sig
+        esp_err_t result = uart_driver_delete(UART_PORT);
+        if(result != ESP_OK){
+            printf("uart_driver_delete failed: %s", esp_err_to_name(result));
+            return result;
+        }
+    }
+
+    uart_queue = NULL;
+    return ESP_OK;
+}
 
 /**
  * @brief configures the esp to send / receive dmx data.
@@ -241,16 +258,21 @@ esp_err_t initDMX(bool sendDMX) {
     uart_param_config(UART_PORT, &uart_config);
     uart_set_pin(UART_PORT, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
-    gpio_set_direction(rxtxDIR_PIN, GPIO_MODE_OUTPUT); // CONFIGURE GPIO PIN 26 AS OUTPUT
+    gpio_set_direction(rxtxDIR_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(rxtxDIR_PIN, sendDMX ? 1 : 0);
 
-    gpio_set_level(rxtxDIR_PIN, sendDMX ? 1 : 0); // PULL OUTPUT DIR HIGH TO SEND
-    sendDMXSemaphore = xSemaphoreCreateMutex();
+    if(sendDMXSemaphore == NULL){
+        sendDMXSemaphore = xSemaphoreCreateMutex();
+    }
 
-    //Check if the semaphore was successfully created.
+    // Check if the semaphore was successfully created.
     if (sendDMXSemaphore == NULL) {
         printf("Failed to create DMX semaphore\n");
         return ESP_FAIL;
     }
+
+    esp_err_t result = resetDMX();
+    if(result != ESP_OK) return result;
 
     // install uart event queue driver
     esp_err_t result = uart_driver_install(UART_PORT, RX_BUF_SIZE * 2, 513, 20, &uart_queue, 0);
@@ -264,10 +286,6 @@ esp_err_t initDMX(bool sendDMX) {
     if (result != ESP_OK) {
         printf("Failed to install UART driver: %d\n", result);
     } else{
-        if(dmxOperationsTaskHandle != NULL){
-            vTaskDelete(dmxOperationsTaskHandle); // Delete other running dmx operations
-        }
-
         if(sendDMX){
             xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         } else{
