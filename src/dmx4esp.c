@@ -14,6 +14,8 @@
 #include "string.h"
 #include "driver/gpio.h"
 #include "esp_mac.h"
+#include "esp_rom_sys.h"
+#include "stdlib.h"
 
 static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
 
