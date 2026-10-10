@@ -14,7 +14,7 @@
 
 #define FIXTURE_FOOTPRINT 3
 #define FIXTURE_ADDRESS 1
-#define REFRESH_RATE 10
+#define REFRESH_RATE 1
 
 #define LED_GPIO 48
 
