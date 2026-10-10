@@ -14,7 +14,6 @@
 
 #define LED_PIN GPIO_NUM_10
 #define DEBUG_PIN GPIO_NUM_2
-#define CONFIG_FREERTOS_HZ 100
 #define REFRESH_RATE_MS 10
 
 #define START_CODE_AT_0 1

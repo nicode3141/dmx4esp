@@ -10,7 +10,6 @@
 #include "esp_mac.h"
 #include "math.h"
 
-#define CONFIG_FREERTOS_HZ 100
 #define ARRAY_LENGTH_MACRO(a) (sizeof(a) / sizeof(a[0]))
 #define waitMS(a) vTaskDelay(a / portTICK_PERIOD_MS);
 

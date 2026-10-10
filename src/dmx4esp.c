@@ -15,8 +15,6 @@
 #include "driver/gpio.h"
 #include "esp_mac.h"
 
-#define CONFIG_FREERTOS_HZ 100
-
 static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
 
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
