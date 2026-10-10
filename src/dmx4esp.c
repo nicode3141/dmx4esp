@@ -263,9 +263,11 @@ esp_err_t initDMX(bool sendDMX) {
     // Check if installation was successful
     if (result != ESP_OK) {
         printf("Failed to install UART driver: %d\n", result);
-    } else if(dmxOperationsTaskHandle != NULL){
-        vTaskDelete(dmxOperationsTaskHandle); // Delete other running dmx operations
     } else{
+        if(dmxOperationsTaskHandle != NULL){
+            vTaskDelete(dmxOperationsTaskHandle); // Delete other running dmx operations
+        }
+
         if(sendDMX){
             xTaskCreatePinnedToCore(sendDMXtask, "DMX Send Task", 2048, NULL, 1, &dmxOperationsTaskHandle, 1); //PIN TO CORE 1
         } else{
