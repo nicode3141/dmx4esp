@@ -20,9 +20,10 @@
 static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
 
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
- static QueueHandle_t uart_queue; //stores the event queue handle
+static QueueHandle_t uart_queue; //stores the event queue handle
 static SemaphoreHandle_t sendDMXSemaphore; //semaphore in form of a Mutex
 static TaskHandle_t dmxOperationsTaskHandle; //keep track of running tasks
+static portMUX_TYPE dmx_break_lock = portMUX_INITIALIZER_UNLOCKED; //lock core while sending break signal
 
 //define pinout
 static gpio_num_t TXD_PIN = GPIO_NUM_NC;
@@ -76,6 +77,9 @@ void setupDMX(dmxPinout pinout){
 static void sendDMXPipeline(uint8_t *startCode){
     //UART communication
     uart_wait_tx_done(UART_PORT, 1000); // wait 1000 ticks until empty
+
+    portENTER_CRITICAL(&dmx_break_lock);
+
     //Reset or Break > 88µs
     uart_set_line_inverse(UART_PORT, UART_SIGNAL_TXD_INV); //create a break signal by inversing TXD signal
     esp_rom_delay_us(delayBreakMICROSEC);
@@ -83,10 +87,12 @@ static void sendDMXPipeline(uint8_t *startCode){
     //Mark > 12µs
     esp_rom_delay_us(delayMarkMICROSEC); //Mark signal after Break
 
-    //Start Code
-    uart_write_bytes(UART_PORT, (const char*) startCode, 1); //mark start code
+    portEXIT_CRITICAL(&dmx_break_lock);
 
     xSemaphoreTake(sendDMXSemaphore, portMAX_DELAY);
+
+     //Start Code
+    uart_write_bytes(UART_PORT, (const char*) startCode, 1); //mark start code
 
     //DMX PACKET
     uart_write_bytes(UART_PORT, (const char*) dmxPacket, 512);
@@ -113,15 +119,6 @@ static void sendDMXtask(void * parameters){
         sendDMXPipeline(&startCode);
     }
 }
-
-/** ----------------------------------------------------------------
- *  ------  The DMX READ feature is CURRENTLY NOT SUPPORTED! -------
- *  
- *  The implementation below is unreliable due to timing problems
- *      with the esp32 development boards
- *      and lack of development time.
- *  ----------------------------------------------------------------
- */
 
 /**
  * @brief Internal function to decode the received uart stream into dmx data.
