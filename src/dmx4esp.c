@@ -18,8 +18,6 @@
 #include "stdlib.h"
 #include "esp_check.h"
 
-static const int RX_BUF_SIZE = 513; // 512 Channels + Startbit
-
 //Async DMX Handler for multithreading, I'm using a semaphore in order to prevent race conditions and avoid data corruption during transmission.
 static QueueHandle_t uart_queue; //stores the event queue handle
 static SemaphoreHandle_t sendDMXSemaphore; //semaphore in form of a Mutex
@@ -36,6 +34,7 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 //UART DMX Communication Protocol
 #define delayBreakMICROSEC 250 // duration of the Break Signal (>88µs)
 #define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
+#define RX_BUF_SIZE 513 // 512 Channels + Startbit
 
 //enums needed for internal dmx decoding
 static volatile DMXStatus dmxStatus = SEND;
@@ -143,6 +142,7 @@ static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
 
     if(dmxStatus == BREAK){
         if(receiveBuffer[0] != 0x00) return; // detect invalid startbit
+        memset(&dmxRxBuff[1], 0, 512); // reset internal buffer
         dmxStatus = RECEIVE_DATA;
 
         dmxRxBuff[0] = receiveBuffer[0];
@@ -210,6 +210,7 @@ static void receiveDMXtask(void * parameters){
                 case UART_FIFO_OVF:
                     uart_flush_input(UART_PORT);
                     xQueueReset(uart_queue);
+                    dmxStatus = INACTIVE;
                     break;
                 default:
                     xQueueReset(uart_queue);
@@ -326,7 +327,7 @@ esp_err_t initDMX(bool sendDMX) {
  * @note  This function is only expected to be used internally.
  * @return void
  */
-void clearDMXQueue(){
+static void clearDMXQueue(){
     uart_flush_input(UART_PORT);
 }
 
