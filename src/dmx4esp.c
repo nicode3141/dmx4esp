@@ -183,6 +183,12 @@ static void receiveDMXtask(void * parameters){
             
             switch(uartEvent.type){
                 case UART_BREAK:
+                // support cheap dmx controllers which don't reach DMX512
+                    if(dmxStatus == RECEIVE_DATA && lastDmxReadAddress > 1){
+                        xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
+                        memcpy(dmxReadOutput, dmxRxBuff, 513);
+                        xSemaphoreGive(readDMXSemaphore);
+                    }
                     if((dmxStatus == DONE) || (dmxStatus == INACTIVE)){
                         uart_flush_input(UART_PORT);
                         xQueueReset(uart_queue);
