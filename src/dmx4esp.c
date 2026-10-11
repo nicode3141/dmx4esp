@@ -35,9 +35,11 @@ static const uart_port_t UART_PORT = UART_NUM_2; // we're using UART_NUM_2, UART
 #define delayBreakMICROSEC 250 // duration of the Break Signal (>88µs)
 #define delayMarkMICROSEC 20 // duration of the Mark After Break Signal (>12µs)
 #define RX_BUF_SIZE 513 // 512 Channels + Startbit
+#define DMX_STALE_TIME_MS 300 // hold received DMX signal for a short amount of time when inactive
 
 //enums needed for internal dmx decoding
 static volatile DMXStatus dmxStatus = SEND;
+static volatile long latest_received_tick;
 
 static uint8_t dmxPacket[512]; //send packet
 static uint8_t dmxRxBuff[513]; //receive task writes bytes
@@ -141,9 +143,10 @@ static void read_uart_stream(uint8_t receiveBuffer[], uart_event_t *uartEvent){
     int startAdress = 0;
 
     if(dmxStatus == BREAK){
-        if(receiveBuffer[0] != 0x00) return; // detect invalid startbit
+        if(receiveBuffer[0] != 0x00) return; // detect non dmx startbit
         memset(&dmxRxBuff[1], 0, 512); // reset internal buffer
         dmxStatus = RECEIVE_DATA;
+        latest_received_tick = xTaskGetTickCount();
 
         dmxRxBuff[0] = receiveBuffer[0];
         lastDmxReadAddress = 1;
@@ -179,7 +182,7 @@ static void receiveDMXtask(void * parameters){
 
     for(;;){
         memset(receiveBuffer, 0, RX_BUF_SIZE); //clear buffer
-        if(xQueueReceive(uart_queue, (void *)&uartEvent, portMAX_DELAY) == pdTRUE){ //pdTRUE if an item got successfully received from the queue
+        if(xQueueReceive(uart_queue, (void *)&uartEvent, pdMS_TO_TICKS(DMX_STALE_TIME_MS)) == pdTRUE){ //pdTRUE if an item got successfully received from the queue
             
             switch(uartEvent.type){
                 case UART_BREAK:
@@ -219,7 +222,9 @@ static void receiveDMXtask(void * parameters){
                     break;
             }
         } else{
-            
+            xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
+            memset(dmxReadOutput, 0, sizeof(dmxReadOutput));
+            xSemaphoreGive(readDMXSemaphore);
         }
      }
 
@@ -422,4 +427,17 @@ void readFixture(uint8_t* output, uint16_t startAddress, uint16_t footprint){
     xSemaphoreTake(readDMXSemaphore, portMAX_DELAY);
     memcpy(output, &dmxReadOutput[startAddress], footprint); //copy a part of the original dmx output
     xSemaphoreGive(readDMXSemaphore);
+}
+
+/**
+ * @brief Returns true if a dmx packet has been received within the last 300ms
+ * 
+ * @note change DMX_STALE_TIME_MS for custom time window
+ * @returns true if a packet was received recently, else false
+ *    
+ */
+bool dmxActive(){
+    long last_signal_time = latest_received_tick;
+
+    return xTaskGetTickCount() - last_signal_time < pdMS_TO_TICKS(DMX_STALE_TIME_MS);
 }
