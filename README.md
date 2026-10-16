@@ -97,13 +97,7 @@ uint8_t receivedSignal[513];
 //update state
 for(;;){
     //get the current dmx frame as an array
-    uint8_t* readBuffer = readDMX();
-
-    //check if operation was successfull
-    if(readBuffer != NULL){
-        //copy the received data into a static array
-        memcpy(receivedSignal, readBuffer, 513);
-    }
+    readDMX(receivedSignal);
 
     //wait a custom interval before reading
     vTaskDelay(pdMS_TO_TICKS(REFRESH_RATE));
